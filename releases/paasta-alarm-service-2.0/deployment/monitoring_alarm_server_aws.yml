@@ -1,0 +1,96 @@
+compilation:
+  cloud_properties:
+    availability_zone: us-east-1d
+    instance_type: c3.large
+  network: monitoring-alarm-server-net
+  reuse_compilation_vms: true
+  workers: 1
+director_uuid: <%= `bosh status --uuid` %>
+
+jobs:
+- cloud_properties:
+    name: default
+  instances: 1
+  memory_mb: 2048
+  name: alarm_server_z1
+  networks:
+  - name: monitoring-alarm-server-net
+    static_ips: 10.10.5.135
+  properties: {}
+  resource_pool: monitoring-alarm-server
+  templates:
+  - name: route_registrar
+    release: cf
+  - name: alarm_server
+    release: monitoring-alarm-server
+  update:
+    max_in_flight: 1
+    serial: false
+
+meta:
+  stemcell:
+    name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
+    version: latest
+name: monitoring-alarm-server
+networks:
+- name: monitoring-alarm-server-net
+  subnets:
+  - cloud_properties:
+      aws_access_key_id: AKIAISNP3PVAIXMA6ASQ
+      aws_secret_access_key: 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
+      region: us-east-1d
+      security_groups:
+      - cf-diego-stack2-BOSHSecurityGroup-B0M401A4NYS4
+      subnet: subnet-f4b255d9
+    dns:
+    - 52.71.253.54
+    - 10.10.0.2
+    gateway: 10.10.5.1
+    range: 10.10.5.0/24
+    reserved:
+    - 10.10.5.2 - 10.10.5.120
+    static:
+    - 10.10.5.131 - 10.10.5.140
+  type: manual
+
+properties:
+  syslog_daemon_config:
+    address: null
+    port: null
+  alarm_server:
+    listen_addr: 0.0.0.0:9999
+    log_level: debug
+    bosh:
+      url: https://52.207.82.208:25555
+      user: admin
+      pass: admin
+    manager: Administrator
+    manager_email: admin@openpaas.com
+    sender: alarmservice.monitoring@gmail.com
+    sender_password: zmfhtpsxm12
+    threshold:
+      cpu: 70
+      memory: 70
+      disk: 70
+releases:
+- name: monitoring-alarm-server
+  version: latest
+- name: cf
+  version: latest
+
+resource_pools:
+- cloud_properties:
+    availability_zone: us-east-1d
+    instance_type: m3.medium
+  name: monitoring-alarm-server
+  network: monitoring-alarm-server-net
+  stemcell:
+    name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
+    version: latest
+
+update:
+  canaries: 1
+  canary_watch_time: 30000-100000
+  max_errors: 1
+  max_in_flight: 1
+  update_watch_time: 30000-100000

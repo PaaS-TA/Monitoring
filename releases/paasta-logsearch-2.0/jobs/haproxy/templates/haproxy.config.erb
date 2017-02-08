@@ -1,0 +1,160 @@
+global
+    log <%= p('haproxy.syslog_server') %> syslog <%= p('haproxy.log_level') %>
+    log-tag ls-router
+    daemon
+    user vcap
+    group vcap
+    maxconn 64000
+    spread-checks 4
+    tune.ssl.default-dh-param 2048
+
+defaults
+    log global
+    maxconn 64000
+    option contstats
+    option tcplog
+    timeout connect         <%= p("haproxy.connect_timeout") %>s
+    timeout client          <%= p("haproxy.client_timeout") %>s
+    timeout server          <%= p("haproxy.server_timeout") %>s
+    timeout queue           <%= p("haproxy.queue_timeout") %>s
+
+frontend cf-service-in
+    mode tcp
+
+    <% if properties.haproxy.ssl_pem %>
+    bind :<%= p("haproxy.ingestor.cf-service-inbound_port") %> ssl crt /var/vcap/jobs/haproxy/config/cert.pem no-sslv3
+    <% else %>
+    bind :<%= p("haproxy.ingestor.cf-service-inbound_port") %>
+    <% end %>
+
+    default_backend ingestors-cf-service
+
+backend ingestors-cf-service
+    mode tcp
+    balance roundrobin
+    <% p("haproxy.ingestor.cf-service-backend_servers").each_with_index do |ip, index| %>
+    server ingestor<%= index %> <%= ip %>:<%= p("haproxy.ingestor.cf-service-backend_port") %> check inter 1000
+    <% end %>
+    
+    
+frontend syslog-in
+    mode tcp
+
+    <% if properties.haproxy.ssl_pem %>
+    bind :<%= p("haproxy.ingestor.inbound_port") %> ssl crt /var/vcap/jobs/haproxy/config/cert.pem no-sslv3
+    <% else %>
+    bind :<%= p("haproxy.ingestor.inbound_port") %>
+    <% end %>
+
+    default_backend ingestors
+
+backend ingestors
+    mode tcp
+    balance roundrobin
+    <% p("haproxy.ingestor.backend_servers").each_with_index do |ip, index| %>
+    server ingestor<%= index %> <%= ip %>:<%= p("haproxy.ingestor.backend_port") %> check inter 1000
+    <% end %>
+
+frontend kibana-in
+    mode http
+
+    <% if properties.haproxy.ssl_pem %>
+    bind :<%= p("haproxy.kibana.inbound_port") %> ssl crt /var/vcap/jobs/haproxy/config/cert.pem no-sslv3
+    <% else %>
+    bind :<%= p("haproxy.kibana.inbound_port") %>
+    <% end %>
+
+    <% if p('haproxy.kibana.auth.username') != "" %>
+    acl logged_in http_auth(kibana-user)
+    http-request auth realm "Logs UI" if !logged_in
+    <% end %>
+
+    default_backend kibana
+
+backend kibana
+    mode http
+    balance roundrobin
+    <% p("haproxy.kibana.backend_servers").each_with_index do |ip, index| %>
+    server kibana<%= index %> <%= ip %>:<%= p("haproxy.kibana.backend_port") %> check inter 1000
+    <% end %>
+
+
+frontend elastic-in
+    mode http
+
+    <% if properties.haproxy.ssl_pem %>
+    bind :<%= p("haproxy.elastic.inbound_port") %> ssl crt /var/vcap/jobs/haproxy/config/cert.pem no-sslv3
+    <% else %>
+    bind :<%= p("haproxy.elastic.inbound_port") %>
+    <% end %>
+
+    default_backend elastic
+
+backend elastic
+    mode http
+    balance roundrobin
+    <% p("haproxy.elastic.backend_servers").each_with_index do |ip, index| %>
+    server grafana<%= index %> <%= ip %>:<%= p("haproxy.elastic.backend_port") %> check inter 1000
+    <% end %>
+
+
+
+frontend grafana-in
+    mode http
+
+    <% if properties.haproxy.ssl_pem %>
+    bind :<%= p("haproxy.grafana.inbound_port") %> ssl crt /var/vcap/jobs/haproxy/config/cert.pem no-sslv3
+    <% else %>
+    bind :<%= p("haproxy.grafana.inbound_port") %>
+    <% end %>
+
+    default_backend grafana
+
+backend grafana
+    mode http
+    balance roundrobin
+    <% p("haproxy.grafana.backend_servers").each_with_index do |ip, index| %>
+    server grafana<%= index %> <%= ip %>:<%= p("haproxy.grafana.backend_port") %> check inter 1000
+    <% end %>
+
+backend influxdb
+    mode http
+    balance roundrobin
+    <% p("haproxy.influxdb.backend_servers").each_with_index do |ip, index| %>
+    server influxdb<%= index %> <%= ip %>:<%= p("haproxy.influxdb.backend_port") %> check inter 1000
+    <% end %>
+
+
+frontend cluster_monitor-in
+    mode http
+
+    <% if properties.haproxy.ssl_pem %>
+    bind :<%= p("haproxy.cluster_monitor.inbound_port") %> ssl crt /var/vcap/jobs/haproxy/config/cert.pem no-sslv3
+    <% else %>
+    bind :<%= p("haproxy.cluster_monitor.inbound_port") %>
+    <% end %>
+
+    <% if p('haproxy.cluster_monitor.auth.username') != "" %>
+    acl logged_in http_auth(cluster-monitor-user)
+    http-request auth realm "Cluster Health UI" if !logged_in
+    <% end %>
+
+    default_backend cluster_monitor
+
+backend cluster_monitor
+    mode http
+    balance roundrobin
+    <% p("haproxy.cluster_monitor.backend_servers").each_with_index do |ip, index| %>
+    server kibana<%= index %> <%= ip %>:<%= p("haproxy.cluster_monitor.backend_port") %> check inter 1000
+    <% end %>
+
+<% if p('haproxy.kibana.auth.username') != "" %>
+userlist kibana-user
+    user <%= p('haproxy.kibana.auth.username') %> insecure-password <%= p('haproxy.kibana.auth.password') %>
+<% end %>
+
+<% if p('haproxy.cluster_monitor.auth.username') != "" %>
+userlist cluster-monitor-user
+    user <%= p('haproxy.cluster_monitor.auth.username') %> insecure-password <%= p('haproxy.cluster_monitor.auth.password') %>
+<% end %>
+

@@ -1,0 +1,4 @@
+files:
+  "parser/elasticsearch.stdout.log":
+    fields:
+      type: "logsearch-elasticsearch-stdout-v1"

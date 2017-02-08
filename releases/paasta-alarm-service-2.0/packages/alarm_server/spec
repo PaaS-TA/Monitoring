@@ -1,0 +1,22 @@
+---
+name: alarm_server
+
+dependencies:
+  - golang
+
+files:
+  - com/crossent/monitoring/alarm_server/**/*.go  #gosub
+  - code.cloudfoundry.org/cflager/*.go #gosub
+  - code.cloudfoundry.org/debugserver/*.go #gosub
+  - code.cloudfoundry.org/lager/*.go #gosub
+  - github.com/cloudfoundry-incubator/runtime-schema/cc_messages/flags/*.go  #gosub
+  - github.com/tedsuo/ifrit/*.go #gosub
+  - github.com/tedsuo/ifrit/sigmon/*.go  #gosub
+  - github.com/tedsuo/ifrit/grouper/*.go #gosub
+  - github.com/tedsuo/ifrit/http_server/*.go #gosub
+  - github.com/cloudfoundry-community/gogobosh/*.go #gosub
+  - github.com/tedsuo/rata/*.go #gosub
+  - github.com/bmizerany/pat/*.go #gosub
+  - golang.org/x/oauth2/*.go #gosub
+  - golang.org/x/oauth2/internal/*.go #gosub
+  - golang.org/x/net/context/*.go #gosub

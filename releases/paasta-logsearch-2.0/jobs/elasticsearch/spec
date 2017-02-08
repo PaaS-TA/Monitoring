@@ -1,0 +1,57 @@
+---
+name: elasticsearch
+packages:
+- elasticsearch
+- elasticsearch-plugins-kopf
+- java8
+templates:
+  bin/drain.erb: bin/drain
+  bin/elasticsearch_ctl: bin/elasticsearch_ctl
+  bin/monit_debugger: bin/monit_debugger
+  config/config.yml.erb: config/elasticsearch.yml
+  config/logging.yml.erb: config/logging.yml
+  data/properties.sh.erb: data/properties.sh
+  helpers/ctl_setup.sh: helpers/ctl_setup.sh
+  helpers/ctl_utils.sh: helpers/ctl_utils.sh
+  logsearch/metric-collector/elasticsearch/collector: logsearch/metric-collector/elasticsearch/collector
+  logsearch/logs.yml: logsearch/logs.yml
+properties:
+  elasticsearch.drain:
+    description: Whether to use the built-in drain features to improve deployment reliability
+    # disabled while we do additional testing
+    default: false
+  elasticsearch.master_hosts:
+    description: The list of elasticsearch master node IPs
+  elasticsearch.cluster_name:
+    description: The name of the elastic search cluster
+  elasticsearch.log_level:
+    description: The default logging level (e.g. WARN, DEBUG, INFO)
+    default: INFO
+  elasticsearch.node.allow_master:
+    description: Allow node to become master? (true / false)
+    default: false
+  elasticsearch.node.allow_data:
+    description: Allow node to store data? (true / false)
+    default: false
+  elasticsearch.node.tags:
+    description: A hash of additional tags for the node
+  elasticsearch.exec.environment:
+    description: A hash of additional environment variables for the process
+  elasticsearch.exec.options:
+    description: An array of additional options to pass when starting elasticsearch
+    default: []
+  elasticsearch.discovery.minimum_master_nodes:
+    description: The minimum number of master eligible nodes a node should "see" in order to operate within the cluster. Recommended to set it to a higher value than 1 when running more than 2 nodes in the cluster.
+    default: 1
+  elasticsearch.config_options:
+    description: "Additional options to append to elasticsearch's config.yml (YAML format)."
+    default: ~
+  elasticsearch.logging_options:
+    description: "Additional options to append to elasticsearch's logging.yml (YAML format)."
+    default: ~
+  elasticsearch.plugins:
+    description: "Plugins to run elasticsearch with (array[] = { plugin-name: install-source }; e.g. [ { kopf: 'lmenezes/elasticsearch-kopf' } ])"
+    default: []
+  elasticsearch.http_host:
+    description: "The host address to bind the elasticsearch HTTP service to and to publish for HTTP clients to connect to"
+    default: 0.0.0.0

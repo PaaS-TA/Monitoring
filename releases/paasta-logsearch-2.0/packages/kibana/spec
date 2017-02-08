@@ -1,0 +1,5 @@
+---
+name: kibana
+dependencies: []
+files:
+  - kibana/kibana-*-linux-x64.tar.gz

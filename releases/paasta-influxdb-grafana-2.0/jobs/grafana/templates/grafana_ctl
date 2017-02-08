@@ -1,0 +1,46 @@
+#!/bin/bash
+
+set -e -u -x
+
+RUN_DIR=/var/vcap/sys/run/grafana
+LOG_DIR=/var/vcap/sys/log/grafana
+STORE_DIR=/var/vcap/store/grafana
+PACKAGE_DIR=/var/vcap/packages/grafana
+PIDFILE=$RUN_DIR/pid
+
+source $PACKAGE_DIR/pid_utils.sh
+
+case $1 in
+
+  start)
+    pid_guard $PIDFILE "grafana"
+
+    mkdir -p $RUN_DIR $LOG_DIR $STORE_DIR
+    chown -R vcap:vcap $RUN_DIR $LOG_DIR $STORE_DIR
+
+    # grafana initializes logging before loading out config, using its default
+    # config, which logs under $HOME_PATH/data/log, and blows up if the
+    # directory doesn't exist :(
+    mkdir -p $PACKAGE_DIR/data/log
+    chown vcap:vcap $PACKAGE_DIR/data/log
+
+    exec chpst -u vcap:vcap $PACKAGE_DIR/bin/grafana-server \
+      -config=/var/vcap/jobs/grafana/config/config.ini \
+      -homepath=$PACKAGE_DIR \
+      -pidfile=$PIDFILE \
+      1>>$LOG_DIR/stdout.log \
+      2>>$LOG_DIR/stderr.log
+
+    ;;
+
+  stop)
+    kill_and_wait $PIDFILE
+
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop}"
+
+    ;;
+
+esac

@@ -1,0 +1,5 @@
+check process alarm_server
+  with pidfile /var/vcap/sys/run/alarm_server/alarm_server.pid
+  start program "/var/vcap/jobs/alarm_server/bin/alarm_server_ctl start"
+  stop program "/var/vcap/jobs/alarm_server/bin/alarm_server_ctl stop"
+  group vcap

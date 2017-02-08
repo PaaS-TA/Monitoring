@@ -1,0 +1,40 @@
+---
+name: metrics_collector
+templates:
+  metrics_collector_ctl.erb: bin/metrics_collector_ctl
+
+packages:
+  - pid_utils
+  - metrics_collector
+
+properties:
+  diego.metrics_collector.debug_addr:
+    description: "address at which to serve debug info"
+    default: "0.0.0.0:17020"
+  diego.metrics_collector.log_level:
+    description: "Log level"
+    default: "debug"
+  metrics_collector.uaaUrl:
+    description: "UAA Url"
+    default: "http://uaa.bosh-lite.com"
+  metrics_collector.clientId:
+    description: "UAA client id for doppler service"
+    default: "cf"
+  metrics_collector.clientPass:
+    description: "UAA client password for doppler service"
+    default: ""
+  metrics_collector.influx.url:
+    description: "Influx Time series database URL - Only support UDP protocol"
+    default: "localhost:8089"
+  metrics_collector.influx.database:
+    description: "Influx Databse Name"
+    default: "cf_metric_db"
+  metrics_collector.influx.cf_measurement:
+    description: "Influx CF Measurement Name"
+    default: "cf_metrics"
+  metrics_collector.influx.cf_process_measurement:
+    description: "Influx CF Process Measurement Name"
+    default: "cf_process_metrics"
+  metrics_collector.dopplerUrl:
+    description: "Addresses of doppler websocket. Array Type"
+    default: []

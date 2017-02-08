@@ -1,0 +1,87 @@
+    <% if 'DEBUG' == p('logstash.metadata_level') %>
+        mutate {
+            add_field => [ "@parser[job]", "<%= name %>/<%= index %>" ]
+        }
+
+        ruby {
+            code => "event['@parser[timestamp]'] = Time.now.iso8601(3)"
+        }
+    <% end %>
+
+    #
+    # Default type to _logstash_input 
+    #
+
+    alter {
+        coalesce => [
+            "type", "%{_logstash_input}", "%{_type}"
+        ]
+    }
+
+    #
+    # rewrite our defined globals
+    #
+
+    if [type] == 'redis' or [type] == 'redis-input' {
+        mutate {
+            remove_field => [ 'type' ]
+        }
+    }
+
+    if [type] != '' {
+        mutate {
+            rename => [ "type", "@type" ]
+        }
+    }
+
+    if [message] != '' {
+        mutate {
+            rename => [ "message", "@message" ]
+        }
+    } else if [message] == '' and [@message] !~ /^.+$/ {
+        drop { }
+    }
+
+    #
+    # avoid bad interpolations, like `%{type}` when its missing
+    #
+
+    if [@type] == "" {
+        mutate {
+            add_field => [ "@type", "unknown" ]
+        }
+    }
+
+    #
+    # ignore particularly useless lines
+    #
+
+    if [@message] =~ /^\s*$/ or [@message] =~ /^#.*$/ {
+        drop { }
+    }
+
+    #
+    # trim excessively long messages
+    #
+
+    ruby {
+        code => '
+            max_line_length = <%= p("logstash_parser.message_max_size") %>
+            if event["@message"] && event["@message"].length > max_line_length
+                event["@message"] = event["@message"][0, max_line_length]
+                event["tags"] ||= [] << "_groktrimmed"
+            end
+        '
+    }
+
+    #
+    # trim excess whitespace
+    #
+
+    mutate {
+        strip => [ "@message" ]
+    }
+
+    #
+    # Additional filter types from deployment manifest
+    #

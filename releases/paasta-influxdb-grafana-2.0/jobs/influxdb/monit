@@ -1,0 +1,5 @@
+check process influxdb
+  with pidfile /var/vcap/store/influxdb/influxd.pid
+  start program "/var/vcap/jobs/influxdb/bin/influxd_ctl start"
+  stop program "/var/vcap/jobs/influxdb/bin/influxd_ctl stop"
+  group vcap

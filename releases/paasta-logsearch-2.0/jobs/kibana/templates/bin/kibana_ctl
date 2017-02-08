@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -e # exit immediately if a simple command exits with a non-zero status
+set -u # report the usage of uninitialized variables
+
+# Setup env vars and folders for the webapp_ctl script
+source /var/vcap/jobs/kibana/helpers/ctl_setup.sh 'kibana'
+export PIDFILE=/var/vcap/sys/run/kibana/kibana.pid
+
+function wait_for_template {
+  local template_name="$1"
+  local MASTER_URL="<%= p("kibana.elasticsearch.host") %>:<%= p("kibana.elasticsearch.port") %>"
+
+  set +e
+  while true;  do
+    echo "Waiting for index template to be uploaded: $template_name"
+    curl -X HEAD -f -i "$MASTER_URL"/_template/$template_name > /dev/null 2>&1
+    [ $? ] && break
+    sleep 5
+  done
+  echo "Found $template_name"
+  set -e
+}
+
+
+case $1 in
+
+  start)
+    pid_guard $PIDFILE kibana
+
+    <% p("kibana.wait_for_templates").each do |template| %>
+    wait_for_template "<%= template %>"
+    <% end %>
+
+    echo $$ > $PIDFILE
+
+    MEMORY_LIMIT=$(($(grep MemTotal /proc/meminfo | awk '{print $2}') * <%= p('kibana.memory_limit') %>/100 / 1024))
+    export NODE_OPTIONS="--max-old-space-size=$MEMORY_LIMIT"
+
+    <% p("kibana.env").each do |env| %>
+    export <%= env.keys[0] %>="<%= env.values[0] %>"
+    <% end %>
+
+
+    rm -rf /var/vcap/packages/kibana/installedPlugins/*
+    <% p("kibana.plugins").each do |plugin| name, path = plugin.first %>
+      <% if path.start_with? '/var/vcap' %>
+        /var/vcap/packages/kibana/bin/kibana plugin --install "<%= name %>" --url "file://<%= path %>"
+      <% elsif path.start_with? 'http' %>
+        /var/vcap/packages/kibana/bin/kibana plugin --install "<%= name %>" --url "<%= path %>"
+      <% else %>
+        /var/vcap/packages/kibana/bin/kibana plugin --install "<%= path %>"
+      <% end %>
+    <% end %>
+
+    exec /var/vcap/packages/kibana/bin/kibana \
+         -c $JOB_DIR/config/kibana.conf \
+         >>$LOG_DIR/kibana.stdout.log \
+         2>>$LOG_DIR/kibana.stderr.log
+    ;;
+
+  stop)
+    kill_and_wait $PIDFILE
+
+    ;;
+
+  *)
+    echo "Usage: kibana_ctl {start|stop}"
+
+    ;;
+
+esac

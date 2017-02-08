@@ -1,0 +1,124 @@
+---
+name: haproxy
+
+description: "The HAProxy."
+
+packages:
+- haproxy
+
+templates:
+  haproxy.config.erb:        config/haproxy.config
+  haproxy_ctl:               bin/haproxy_ctl
+  monit_debugger:            bin/monit_debugger
+  cert.pem.erb:              config/cert.pem
+  helpers/ctl_setup.sh:      helpers/ctl_setup.sh
+  helpers/ctl_utils.sh:      helpers/ctl_utils.sh
+  properties.sh.erb:    data/properties.sh
+
+properties:
+  haproxy.syslog_server:
+    description: "An IPv4 address optionally followed by a colon and a UDP port. It can also be an IPv6 address or filesystem path to a UNIX domain socket."
+    default: "127.0.0.1"
+  haproxy.log_level:
+    description: "Log level"
+    default: "info"
+  haproxy.ssl_pem:
+    description: "SSL certificate (PEM file).  Omit if you don't want to use SSL"
+    default: ~
+
+  haproxy.connect_timeout:
+    description: "Timeout waiting for connections to establish to a server (in seconds)"
+    default:     5
+  haproxy.client_timeout:
+    description: "Timeout waiting for data from a client (in seconds)"
+    default:     30
+  haproxy.server_timeout:
+    description: "Timeout waiting for data from a server (in seconds)"
+    default:     30
+  haproxy.queue_timeout:
+    description: "Timeout for requests queued waiting for free connection slots (in seconds)"
+    default:     30
+
+  haproxy.ingestor.inbound_port:
+    description: "The public port of the ingestor service"
+    default: 5514
+  haproxy.ingestor.backend_servers:
+    description: "Array of the ingestor backend IPs"
+    default: []
+  haproxy.ingestor.backend_port:
+    description: "The port number the ingestor backends are listening on"
+    default: 5514
+
+  haproxy.elastic.inbound_port:
+    description: "The public port of the ingestor service"
+    default: 9200
+  haproxy.elastic.backend_servers:
+    description: "Array of the ingestor backend IPs"
+    default: []
+  haproxy.elastic.backend_port:
+    description: "The port number the ingestor backends are listening on"
+    default: 9200
+
+  haproxy.grafana.inbound_port:
+    description: "The public port of the ingestor service"
+    default: 3000
+  haproxy.grafana.backend_servers:
+    description: "Array of the ingestor backend IPs"
+    default: []
+  haproxy.grafana.backend_port:
+    description: "The port number the ingestor backends are listening on"
+    default: 3000
+
+  haproxy.influxdb.inbound_port:
+    description: "The public port of the ingestor service"
+    default: 8083
+  haproxy.influxdb.backend_servers:
+    description: "Array of the ingestor backend IPs"
+    default: []
+  haproxy.influxdb.backend_port:
+    description: "The port number the ingestor backends are listening on"
+    default: 8083
+
+
+  haproxy.ingestor.cf-service-inbound_port:
+    description: "The public port of the ingestor cf service"
+    default: 2514
+  haproxy.ingestor.cf-service-backend_servers:
+    description: "Array of the ingestor backend IPs"
+    default: []
+  haproxy.ingestor.cf-service-backend_port:
+    description: "The port number the ingestor cf backends are listening on"
+    default: 2514
+    
+    
+  haproxy.kibana.inbound_port:
+    description: "The public port of the kibana service"
+    default: 80
+  haproxy.kibana.backend_servers:
+    description: "The list of kibana servers"
+  haproxy.kibana.backend_port:
+    description: "The port of the kibana backend server(s)"
+    default: 5601
+  haproxy.kibana.auth.username:
+    description: "Basic auth username for kibana. Optional"
+    default: ""
+  haproxy.kibana.auth.password:
+    description: "Basic auth password for kibana. Optional"
+    default: ""
+
+  haproxy.cluster_monitor.inbound_port:
+    description: "The public port of the cluster monitor UI"
+    default: 8080
+  haproxy.cluster_monitor.backend_servers:
+    description: "Array of the cluster monitor backend IPs"
+    default: []
+  haproxy.cluster_monitor.backend_port:
+    description: "The port number the cluster monitor backends are listening on"
+    default: 5601
+  haproxy.cluster_monitor.auth.username:
+    description: "Basic auth username for cluster monitor kibana. Optional"
+    default: ""
+  haproxy.cluster_monitor.auth.password:
+    description: "Basic auth password for cluster monitor kibana. Optional"
+    default: ""
+

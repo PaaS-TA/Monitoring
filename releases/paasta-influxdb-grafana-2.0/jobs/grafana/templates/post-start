@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "[$(date)] Calling 'create-update-datasources' ..."
+$(dirname $0)/create-update-datasources

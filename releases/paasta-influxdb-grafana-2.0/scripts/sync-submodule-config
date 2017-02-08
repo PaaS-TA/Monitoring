@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e -x
+
+REPO=$(cd $(dirname $0)/.. && pwd)
+export GOPATH=$REPO/src/influxdb
+
+# for gosub to be able to bootstrap
+touch $REPO/.gitmodules
+
+# so we can start from scratch
+go get -d -v github.com/influxdata/influxdb/cmd/influxd
+
+# sync errything
+gosub list -a github.com/influxdata/influxdb/cmd/influxd | \
+  xargs gosub sync -r $REPO -g $GOPATH

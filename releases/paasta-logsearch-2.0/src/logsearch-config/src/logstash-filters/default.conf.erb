@@ -1,0 +1,9 @@
+<%= File.read('src/logstash-filters/snippets/redact_passwords.conf') %>
+
+if [@type] in ["syslog", "relp", "vms", "bosh"] {
+  <%= File.read('src/logstash-filters/snippets/syslog_standard.conf').gsub(/^/, '  ') %>
+}
+
+if [syslog_program] == "nats-to-syslog" {
+  <%= File.read('src/logstash-filters/snippets/bosh_nats.conf').gsub(/^/, '  ') %>
+}

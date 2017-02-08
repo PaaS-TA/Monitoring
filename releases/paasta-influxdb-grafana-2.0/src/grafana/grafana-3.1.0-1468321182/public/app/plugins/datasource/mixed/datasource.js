@@ -1,0 +1,4 @@
+/*! grafana - v3.1.0-1468321182 - 2016-07-12
+ * Copyright (c) 2016 Torkel Ödegaard; Licensed Apache-2.0 */
+
+System.register(["angular","lodash"],function(a){var b,c,d;return{setters:[function(a){b=a},function(a){c=a}],execute:function(){d=function(){function a(a,b){this.$q=a,this.datasourceSrv=b}return a.$inject=["$q","datasourceSrv"],a.prototype.query=function(a){var d=this,e=c["default"].groupBy(a.targets,"datasource"),f=c["default"].map(e,function(c){var e=c[0].datasource;return"-- Mixed --"===e?d.$q([]):d.datasourceSrv.get(e).then(function(d){var e=b["default"].copy(a);return e.targets=c,d.query(e)})});return this.$q.all(f).then(function(a){return{data:c["default"].flatten(c["default"].pluck(a,"data"))}})},a}(),a("MixedDatasource",d),a("Datasource",d)}}});

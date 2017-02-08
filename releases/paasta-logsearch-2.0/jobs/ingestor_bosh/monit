@@ -1,0 +1,5 @@
+check process ingestor_bosh
+  with pidfile /var/vcap/sys/run/ingestor_bosh/ingestor_bosh.pid
+  start program "/var/vcap/jobs/ingestor_bosh/bin/monit_debugger ingestor_bosh_ctl '/var/vcap/jobs/ingestor_bosh/bin/ingestor_bosh_ctl start'"
+  stop program "/var/vcap/jobs/ingestor_bosh/bin/monit_debugger ingestor_bosh_ctl '/var/vcap/jobs/ingestor_bosh/bin/ingestor_bosh_ctl stop'"
+  group vcap

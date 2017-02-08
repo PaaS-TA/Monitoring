@@ -1,0 +1,159 @@
+package main
+
+import (
+	"os"
+	"strings"
+	"time"
+	"flag"
+	"io/ioutil"
+	"strconv"
+
+	"code.cloudfoundry.org/cflager"
+	"github.com/cloudfoundry-incubator/runtime-schema/cc_messages/flags"
+	"code.cloudfoundry.org/debugserver"
+	"github.com/pivotal-golang/lager"
+	"github.com/cloudfoundry/dropsonde"
+	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/sigmon"
+	"github.com/tedsuo/ifrit/grouper"
+
+	"com/crossent/monitoring/metrics_collector/handler"
+	"com/crossent/monitoring/metrics_collector/util"
+)
+var clientId = flag.String(
+	"clientId",
+	"",
+	"UAA client id for doppler service ",
+)
+
+var clientPass = flag.String(
+	"clientPass",
+	"",
+	"UAA client password for doppler service ",
+)
+
+var uaaUrl = flag.String(
+	"uaaUrl",
+	"",
+	"Address of UAA ",
+)
+
+var logStashUrl = flag.String(
+	"logStashUrl",
+	"",
+	"Address of LogStash URL - Host:Port",
+)
+
+var dopplerUrl = flag.String(
+	"dopplerUrl",
+	"",
+	"doppler url. In case of multi doppler url, Do separate info by comma. example wss://doppler.bosh-lite.com,wss://doppler2.bosh-lite.com  ",
+)
+
+var pidFile = flag.String(
+	"pidFile",
+	"",
+	"File for Current Process ID",
+)
+
+type Config map[string]string
+
+const (
+	dropsondeOrigin      = "metrics_collector"
+	dropsondeDestination = "localhost:3457"
+)
+
+func main() {
+	debugserver.AddFlags(flag.CommandLine)
+	cflager.AddFlags(flag.CommandLine)
+
+	lifecycles := flags.LifecycleMap{}
+	flag.Var(&lifecycles, "lifecycle", "app lifecycle binary bundle mapping (lifecycle[/stack]:bundle-filepath-in-fileserver)")
+	flag.Parse()
+
+	logger, reconfigurableSink := cflager.New("metrics_collector")
+	initializeDropsonde(logger)
+
+	//======================= paramter info =================================
+	/*logger.Info("##### request param :", lager.Data{"uaaUrl ":*uaaUrl})
+	logger.Info("##### request param :", lager.Data{"dopplerUrl ":*dopplerUrl})
+	logger.Info("##### request param :", lager.Data{"logStashUrl ":*logStashUrl})
+	logger.Info("##### request param :", lager.Data{"clientId ":*clientId})
+	logger.Info("##### request param :", lager.Data{"clientPass ":*clientPass})
+	logger.Info("##### request param :", lager.Data{"pidFile ":*pidFile})*/
+	//======================= Save Process ID to .pid file ==================
+	pid := os.Getpid()
+	logger.Info("##### process id :", lager.Data{"process_id ":pid})
+	_, err := os.Stat(*pidFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			//logger.Fatal("Target PID File does not exist.", err)
+			logger.Error("Target PID File does not exist.", err)
+
+			//Create new PID File if not exists.
+			pid_file_loc := string("/var/vcap/sys/run/metrics_collector/metrics_collector.pid")
+			f, err := os.OpenFile(pid_file_loc, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+			defer f.Close()
+			if err != nil {
+				logger.Fatal("#Main: failt to create pid file.", err)
+			}
+			f.WriteString(strconv.Itoa(pid))
+		}
+	}
+	err = ioutil.WriteFile(*pidFile, []byte(strconv.Itoa(pid)), 0666)
+	if err != nil {
+		logger.Fatal("#Main: Taget PID FIle write error :", err)
+	}
+	//=======================================================================
+
+	var startTime time.Time
+	//============================================
+	// Get token
+	cf_token, err :=  util.GetCFToken(logger, *uaaUrl, *clientId, *clientPass)
+	if err != nil {
+		logger.Info("#Main: There is an error hannpend getting user token", )
+		os.Exit(0)
+	}
+	//============================================
+
+	//============================================
+	logger.Debug("##### main.go", lager.Data{"clientId": *clientId})
+	logger.Debug("##### main.go", lager.Data{"clientPass": *clientPass})
+	logger.Debug("##### main.go", lager.Data{"LogStashUrl": *logStashUrl})
+	logger.Debug("##### main.go", lager.Data{"dopplerUrl": *dopplerUrl})
+	//============================================
+	dopplerArray := strings.Split(*dopplerUrl, ",")
+
+	members := grouper.Members{
+		{"metrics_collector", handler.New(logger, dopplerArray, cf_token, *uaaUrl, *clientId, *clientPass,  *logStashUrl)},
+	}
+
+	if dbgAddr := debugserver.DebugAddress(flag.CommandLine); dbgAddr != "" {
+		members = append(grouper.Members{
+			{"debug-server", debugserver.Runner(dbgAddr, reconfigurableSink)},
+		}, members...)
+	}
+
+	logger.Info("#metrics_collector started")
+
+	group := grouper.NewOrdered(os.Interrupt, members)
+
+	monitor := ifrit.Invoke(sigmon.New(group))
+
+	monit_err := <-monitor.Wait()
+
+	if monit_err != nil {
+		logger.Fatal("#Main: exited-with-failure", monit_err)
+	}
+
+	elapsed := time.Since(startTime)
+	logger.Info("#ElapsedTime in seconds:", map[string]interface{}{"elapsed_time": elapsed, })
+	logger.Info("#metrics_collector exited")
+}
+
+func initializeDropsonde(logger lager.Logger) {
+	err := dropsonde.Initialize(dropsondeDestination, dropsondeOrigin)
+	if err != nil {
+		logger.Error("Main: failed to initialize dropsonde: %v", err)
+	}
+}

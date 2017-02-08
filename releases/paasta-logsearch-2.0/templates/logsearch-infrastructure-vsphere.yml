@@ -1,0 +1,72 @@
+compilation:
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+meta:
+  stemcell:
+    name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+    version: latest
+
+resource_pools:
+- name: elasticsearch_master
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: elasticsearch_data
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: queue
+  cloud_properties:
+    ram: 2048
+    disk: 4096
+    cpu: 2
+
+- name: ingestor
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: parser
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: maintenance
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: kibana
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: cluster_monitor
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: haproxy
+  cloud_properties:
+    ram: 4096
+    disk: 30000
+    cpu: 2
+
+- name: errand
+  cloud_properties:
+    ram: 1024
+    disk: 30000
+    cpu: 2
+

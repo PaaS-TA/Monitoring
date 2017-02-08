@@ -1,0 +1,8 @@
+---
+name: grafana
+
+dependencies: []
+
+files:
+- grafana/*.tar.gz # From wget https://grafanarel.s3.amazonaws.com/builds/grafana-3.1.0-1468321182.linux-x64.tar.gz (or) https://grafanarel.s3.amazonaws.com/builds/grafana-3.1.1-1470047149.linux-x64.tar.gz
+- pid_utils.sh

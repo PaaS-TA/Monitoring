@@ -1,0 +1,484 @@
+---
+name: logsearch
+compilation:
+  cloud_properties:
+    name: random
+    instance_type: monitoring
+    availability_zone: nova 
+  network: selfservice
+  reuse_compilation_vms: true
+  workers: 6
+
+director_uuid: 2cdc3280-ea6c-421d-ba25-d718d25236aa 
+
+meta:
+  environment: openstack-log
+  floating_static_ips:
+  - 115.68.151.190
+
+disk_pools:
+
+- cloud_properties:
+    type: SSD2
+#  disk_size: 102400
+  disk_size: 1024 
+  name: elasticsearch_master
+
+- cloud_properties:
+    type: SSD2
+  disk_size: 10240 
+  name: elasticsearch_data
+
+- cloud_properties:
+    type: SSD2
+  disk_size: 1024 
+  name: queue
+
+- cloud_properties:
+    type: SSD2
+  disk_size: 1024
+  name: cluster_monitor
+
+jobs:
+- instances: 1
+  name: elasticsearch_master
+  networks:
+  - name: selfservice
+    static_ips:
+    - 172.16.1.120
+  persistent_disk_pool: elasticsearch_master
+  properties:
+    elasticsearch:
+      node:
+        allow_data: false
+        allow_master: true
+  resource_pool: elasticsearch_master
+  templates:
+  - name: elasticsearch
+    release: logsearch
+  update:
+    max_in_flight: 1
+- instances: 1
+  name: cluster_monitor
+  networks:
+  - name: selfservice
+    static_ips:
+    - 172.16.1.122
+  persistent_disk_pool: cluster_monitor
+  properties:
+    curator:
+      elasticsearch_host: 127.0.0.1
+      elasticsearch_port: 9200
+      purge_logs:
+        retention_period: 7
+    elasticsearch:
+      cluster_name: monitor
+      master_hosts:
+      - 127.0.0.1
+      node:
+        allow_data: true
+        allow_master: true
+    elasticsearch_config:
+      elasticsearch:
+        host: 127.0.0.1
+        port: 9200
+      templates:
+      - shards-and-replicas: '{ "template" : "*", "order" : 99, "settings" : { "number_of_shards"
+          : 1, "number_of_replicas" : 0 } }'
+      - index_template: /var/vcap/packages/logsearch-config/default-mappings.json
+    kibana:
+      elasticsearch:
+        host: 127.0.0.1
+        port: 9200
+      memory_limit: 30
+      port: 5601
+      wait_for_templates:
+      - shards-and-replicas
+    logstash_ingestor:
+      syslog:
+        port: 514
+    logstash_parser:
+      filters:
+      - monitor: /var/vcap/packages/logsearch-config/logstash-filters-monitor.conf
+    nats_to_syslog:
+      debug: true
+      nats:
+        machines:
+        - 10.244.0.116
+        password: nats
+        port: 4222
+        subject: '>'
+        user: nats
+      syslog:
+        host: 127.0.0.1
+        port: 514
+    redis:
+      host: 127.0.0.1
+      maxmemory: 10
+  resource_pool: cluster_monitor
+  templates:
+  - name: queue
+    release: logsearch
+  - name: parser
+    release: logsearch
+  - name: ingestor_syslog
+    release: logsearch
+  - name: elasticsearch
+    release: logsearch
+  - name: elasticsearch_config
+    release: logsearch
+  - name: curator
+    release: logsearch
+  - name: kibana
+    release: logsearch
+  - name: nats_to_syslog
+    release: logsearch
+- instances: 1
+  name: queue
+  networks:
+  - name: selfservice
+    static_ips:
+    - 172.16.1.123
+  persistent_disk_pool: queue
+  resource_pool: queue
+  templates:
+  - name: queue
+    release: logsearch
+- instances: 1
+  name: maintenance
+  networks:
+  - name: selfservice
+  resource_pool: maintenance
+  templates:
+  - name: elasticsearch_config
+    release: logsearch
+  - name: curator
+    release: logsearch
+  update:
+    serial: true
+- instances: 2
+  name: elasticsearch_data
+  networks:
+  - name: selfservice
+    static_ips:
+    - 172.16.1.136
+    - 172.16.1.137
+  persistent_disk_pool: elasticsearch_data
+  properties:
+    elasticsearch:
+      node:
+        allow_data: true
+        allow_master: false
+  resource_pool: elasticsearch_data
+  templates:
+  - name: elasticsearch
+    release: logsearch
+  update:
+    max_in_flight: 1
+- instances: 1
+  name: kibana
+  networks:
+  - name: selfservice
+    static_ips:
+    - 172.16.1.126
+  resource_pool: kibana
+  templates:
+  - name: kibana
+    release: logsearch
+  properties:
+    route_registrar:
+      routes:
+      - name: kibana
+        port: 5601
+        registration_interval: 20s
+        uris:
+        - kibana.monitoring.open-paas.com
+- instances: 1
+  name: ingestor
+  networks:
+  - name: selfservice
+    static_ips:
+    - 172.16.1.121
+  properties:
+    logstash_ingestor:
+      debug: true 
+      relp:
+        port: 2514 
+  resource_pool: ingestor
+  templates:
+  - name: ingestor_syslog
+    release: logsearch
+  - name: ingestor_relp
+    release: logsearch
+  - name: ingestor_bosh
+    release: logsearch
+- instances: 1
+  name: parser
+  networks:
+  - name: selfservice
+  resource_pool: parser
+  templates:
+  - name: parser
+    release: logsearch
+  - name: elasticsearch
+    release: logsearch
+  update:
+    max_in_flight: 4
+    serial: false
+- instances: 1
+  name: ls-router
+  networks:
+  - default:
+    - gateway
+    - dns
+    name: selfservice 
+    static_ips:
+    - 172.16.1.125
+  - name: provider
+    static_ips:
+    - 115.68.151.183
+  properties:
+    haproxy:
+      cluster_monitor:
+        backend_servers:
+        - 172.16.1.122
+      ingestor:
+        backend_servers:
+        - 172.16.1.121
+        cf-service-backend_servers:
+        - 172.16.1.121
+        bosh-backend_servers:
+        - 172.16.1.121
+      grafana:
+        backend_servers:
+        - 172.16.1.153
+      influxdb:
+        backend_servers:
+        - 172.16.1.151
+      kibana:
+        backend_servers:
+        - 172.16.1.126
+      syslog_server: 172.16.1.122
+  resource_pool: haproxy
+  templates:
+  - name: haproxy
+    release: logsearch
+- instances: 1
+  lifecycle: errand
+  name: enable_shard_allocation
+  networks:
+  - name: selfservice
+  properties:
+    enable_shard_allocation:
+      elasticsearch:
+        master_node: 172.16.1.120
+  resource_pool: errand
+  templates:
+  - name: enable_shard_allocation
+    release: logsearch
+- instances: 1
+  lifecycle: errand
+  name: smoke-tests
+  networks:
+  - name: selfservice
+  properties:
+    smoke_tests:
+      elasticsearch_master:
+        host: 172.16.1.120
+      syslog_ingestor:
+        host: 172.16.1.129
+  release: logsearch
+  resource_pool: errand
+  templates:
+  - name: smoke-tests
+    release: logsearch
+
+networks:
+
+#Floating ip name in openstack
+
+- name: provider 
+  type: vip
+  cloud_properties:
+    net_id: bb29696d-c0af-4a98-9108-edd23b27c493
+    security_groups: [bosh]
+
+
+- name: selfservice
+  subnets:
+  - cloud_properties:
+      name: random
+      net_id: b7c8c08f-2d3b-4a86-bd10-641cb6faa317
+      security_groups: [bosh]
+    range: 172.16.1.0/24
+    gateway: 172.16.1.1
+    reserved:
+    - 172.16.1.2 - 172.16.1.80
+    - 172.16.1.200 - 172.16.1.254
+    dns:
+    - 172.16.1.12
+    #- 164.124.101.2
+    static:
+    - 172.16.1.110 - 172.16.1.175
+  type: manual
+
+
+properties:
+  curator:
+    elasticsearch:
+      host: 172.16.1.120
+      port: 9200
+  elasticsearch:
+    cluster_name: logsearch
+    exec: null
+    master_hosts:
+    - 172.16.1.120
+  elasticsearch_config:
+    elasticsearch:
+      host: 172.16.1.120
+    templates:
+    - index_template: /var/vcap/packages/logsearch-config/default-mappings.json
+  kibana:
+    elasticsearch:
+      host: 172.16.1.120
+      port: 9200
+  logstash_ingestor:
+    debug: true 
+  logstash_parser:
+    debug: false
+  redis:
+    host: 172.16.1.123
+releases:
+- name: logsearch
+  version: latest
+- name: cf
+  version: latest
+
+resource_pools:
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium
+  name: elasticsearch_master
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium  
+  name: elasticsearch_data
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium 
+  name: ingestor
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium  
+  name: queue
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 4086 
+      type: SSD2
+    instance_type: m1.medium 
+  name: parser
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium 
+  name: kibana
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium 
+  name: maintenance
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium 
+  name: cluster_monitor
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 2048 
+      type: SSD2
+    instance_type: m1.medium 
+  name: haproxy
+  network: selfservice 
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+- cloud_properties:
+    name: random
+    availability_zone: nova
+    ephemeral_disk:
+      size: 4086 
+      type: SSD2
+    instance_type: m1.medium 
+  name: errand
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: 3232.22
+update:
+  canaries: 1
+  canary_watch_time: 30000-600000 
+  max_errors: 1
+  max_in_flight: 1
+  serial: false
+  update_watch_time: 5000-600000

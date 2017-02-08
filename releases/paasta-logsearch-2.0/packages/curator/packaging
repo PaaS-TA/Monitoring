@@ -1,0 +1,15 @@
+set -e # exit immediately if a simple command exits with a non-zero status
+set -u # report the usage of uninitialized variables
+
+export PATH=/var/vcap/packages/python3/bin:$PATH
+
+echo "All dependancies should be in $BOSH_COMPILE_TARGET/curator"
+find $BOSH_COMPILE_TARGET/curator
+
+# --no-index prevents contacting pypi to download packages
+# --find-links tells pip where to look for the dependancies
+pip3 install --no-index --find-links $BOSH_COMPILE_TARGET/curator --install-option="--prefix=$BOSH_INSTALL_TARGET" elasticsearch-curator
+
+echo "Installed to $BOSH_INSTALL_TARGET"
+find $BOSH_INSTALL_TARGET
+

@@ -1,0 +1,62 @@
+#!/bin/bash 
+set -e -x
+
+RUN_DIR=/var/vcap/sys/run/metrics_collector
+LOG_DIR=/var/vcap/sys/log/metrics_collector
+
+PIDFILE=$RUN_DIR/metrics_collector.pid
+
+source /var/vcap/packages/pid_utils/pid_utils.sh
+
+case $1 in
+
+start)
+    pid_guard $PIDFILE "metrics_collector"
+
+    mkdir -p $RUN_DIR
+    chown -R vcap:vcap $RUN_DIR
+
+    mkdir -p $LOG_DIR
+    chown -R vcap:vcap $LOG_DIR
+
+    export GOMAXPROCS=$(nproc)
+
+    #echo $$ > $PIDFILE
+    PID=$$
+    echo "current pid : $PID"
+    echo $PID > $PIDFILE
+    
+    # change file mode to 0666
+    chmod 666 $PIDFILE
+
+    # Allowed number of open file descriptors
+    ulimit -n 100000
+
+    exec chpst -u vcap:vcap /var/vcap/packages/metrics_collector/bin/metrics_collector \
+      -uaaUrl=<%= p("metrics_collector.uaaUrl") %> \
+      -clientId=<%= p("metrics_collector.clientId") %> \
+      -clientPass=<%= p("metrics_collector.clientPass") %> \
+      -influxUrl=<%= p("metrics_collector.influx.url") %> \
+      -influxDatabase=<%= p("metrics_collector.influx.database") %> \
+      -cfMeasurement=<%= p("metrics_collector.influx.cf_measurement") %> \
+      -cfProcessMeasurement=<%= p("metrics_collector.influx.cf_process_measurement") %> \
+      -dopplerUrl=<%= p("metrics_collector.dopplerUrl").join(",") %> \
+      -debugAddr=<%= p("diego.metrics_collector.debug_addr") %> \
+      -logLevel=<%= p("diego.metrics_collector.log_level") %> \
+      -pidFile=$PIDFILE \
+      2> >(tee -a $LOG_DIR/metrics_collector.stderr.log | logger -p user.error -t vcap.metrics_collector) \
+      1> >(tee -a $LOG_DIR/metrics_collector.stdout.log | logger -p user.info -t vcap.metrics_collector) 
+
+    ;;
+
+stop)
+    kill_and_wait $PIDFILE
+
+    ;;
+
+*)
+    echo "Usage: metrics_collector_ctl {start|stop}"
+
+    ;;
+
+esac

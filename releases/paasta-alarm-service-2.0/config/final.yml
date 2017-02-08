@@ -1,0 +1,6 @@
+---
+blobstore:
+  provider: local
+  options:
+        blobstore_path: blobs
+final_name: monitoring-api-server

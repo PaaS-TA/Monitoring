@@ -1,0 +1,9 @@
+---
+name: bootstrapper
+
+dependencies:
+- golang
+
+files:
+- bootstrapper/**/*
+- influxdb/**/*

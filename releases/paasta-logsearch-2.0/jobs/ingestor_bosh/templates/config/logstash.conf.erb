@@ -1,0 +1,49 @@
+input {
+	udp{
+		add_field => { "_logstash_input" => "bosh" }
+		host => "0.0.0.0"
+		port => "<%= p("logstash_ingestor.bosh.port") %>"
+	}
+}
+
+filter {
+}
+			
+output {
+	<% if p("logstash_ingestor.debug") %>
+        stdout {
+            codec => "json"
+        }
+	<% end %>
+
+	<% if_p("logstash_ingestor.outputs") do |ingestor_outputs| %>
+	  <% ingestor_outputs.each do | output | %>
+	    <%= output['plugin'] %> {
+              <% if 'redis' == output['plugin'] %>
+                <% output['options'] = {
+                  "host" => p('redis.host'),
+                  "port" => p('redis.port'),
+                  "data_type" => "list",
+                  "key" => p('redis.key'),
+                  "batch" => true,
+                  "batch_events" => 50
+                } %>
+              <% end %> 
+	      <% output['options'].each do | k, v | %>
+	        <%= k %> => <%= v.inspect %>
+	      <% end %>
+	    }
+	  <% end %>
+	<% end %>
+
+	<% if p('archiver.enabled') %>
+		redis {
+			host => "<%= p("redis.host") %>"
+			port => "<%= p("redis.port") %>"
+			data_type => "list"
+			key => "<%= p("redis.key") %>_archiver"
+			batch => true
+			batch_events => 50
+		}
+	<% end %>
+}
