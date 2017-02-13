@@ -1,0 +1,6 @@
+#!/bin/bash
+
+scripts_dir="`dirname "$0"`"
+pushd $scripts_dir
+  ./generate-certs ../uaa-certs uaa.service.cf.internal
+popd

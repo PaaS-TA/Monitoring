@@ -1,0 +1,6 @@
+[submodule "vendor/github.com/pivotal-cf-experimental/gomegamatchers"]
+	path = vendor/github.com/pivotal-cf-experimental/gomegamatchers
+	url = https://github.com/pivotal-cf-experimental/gomegamatchers.git
+[submodule "vendor/gopkg.in/yaml.v2"]
+	path = vendor/gopkg.in/yaml.v2
+	url = https://gopkg.in/yaml.v2

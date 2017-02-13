@@ -1,0 +1,276 @@
+meta:
+  stemcell: (( merge || .meta.default_stemcell ))
+
+  default_stemcell:
+    name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+    version: latest
+
+  resource_pools:
+    small_z1:
+      cloud_properties:
+        ram: 1024
+        disk: 4096
+        cpu: 1
+
+    small_z2:
+      cloud_properties:
+        ram: 1024
+        disk: 4096
+        cpu: 1
+
+    medium_z1:
+      cloud_properties:
+        ram: 1024
+        disk: 4096
+        cpu: 1
+
+    medium_z2:
+      cloud_properties:
+        ram: 1024
+        disk: 4096
+        cpu: 1
+
+    large_z1:
+      cloud_properties:
+        ram: 1024
+        disk: 10240
+        cpu: 1
+
+    large_z2:
+      cloud_properties:
+        ram: 1024
+        disk: 10240
+        cpu: 1
+
+    runner_z1:
+      cloud_properties:
+        ram: 16384
+        disk: 32768
+        cpu: 2
+
+    runner_z2:
+      cloud_properties:
+        ram: 16384
+        disk: 32768
+        cpu: 2
+
+    router_z1:
+      cloud_properties:
+        ram: 1024
+        disk: 2048
+        cpu: 1
+
+    router_z2:
+      cloud_properties:
+        ram: 1024
+        disk: 2048
+        cpu: 1
+
+    small_errand:
+      cloud_properties:
+        ram: 1024
+        disk: 2048
+        cpu: 1
+
+compilation:
+  cloud_properties:
+    ram: 1024
+    disk: 8192
+    cpu: 2
+networks: (( merge ))
+
+resource_pools:
+  - name: small_z1
+    cloud_properties: (( merge || meta.resource_pools.small_z1.cloud_properties ))
+
+  - name: small_z2
+    cloud_properties: (( merge || meta.resource_pools.small_z2.cloud_properties ))
+
+  - name: medium_z1
+    cloud_properties: (( merge || meta.resource_pools.medium_z1.cloud_properties ))
+
+  - name: medium_z2
+    cloud_properties: (( merge || meta.resource_pools.medium_z2.cloud_properties ))
+
+  - name: large_z1
+    cloud_properties: (( merge || meta.resource_pools.large_z1.cloud_properties ))
+
+  - name: large_z2
+    cloud_properties: (( merge || meta.resource_pools.large_z2.cloud_properties ))
+
+  - name: runner_z1
+    cloud_properties: (( merge || meta.resource_pools.runner_z1.cloud_properties ))
+
+  - name: runner_z2
+    cloud_properties: (( merge || meta.resource_pools.runner_z2.cloud_properties ))
+
+  - name: router_z1
+    cloud_properties: (( merge || meta.resource_pools.router_z1.cloud_properties ))
+
+  - name: router_z2
+    cloud_properties: (( merge || meta.resource_pools.router_z2.cloud_properties ))
+
+  - name: small_errand
+    cloud_properties: (( merge || meta.resource_pools.small_errand.cloud_properties ))
+
+jobs:
+  - name: nats_z1
+    instances: 1
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(1) ))
+
+  - name: nats_z2
+    instances: 1
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(1) ))
+
+  - name: nfs_z1
+    instances: 0
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(2) ))
+
+  - name: blobstore_z1
+    instances: 1
+    networks:
+      - name: cf1
+
+  - name: postgres_z1
+    instances: 1
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(12) ))
+
+  - name: router_z1
+    instances: 1
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(5, 6) ))
+
+  - name: router_z2
+    instances: 1
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(5, 6) ))
+
+  - name: loggregator_z1
+    instances: 0
+    networks:
+      - name: cf1
+
+  - name: loggregator_z2
+    instances: 0
+    networks:
+      - name: cf2
+
+  - name: doppler_z1
+    instances: 1
+    networks:
+      - name: cf1
+
+  - name: doppler_z2
+    instances: 1
+    networks:
+      - name: cf2
+
+  - name: loggregator_trafficcontroller_z1
+    instances: 1
+    networks:
+      - name: cf1
+
+  - name: loggregator_trafficcontroller_z2
+    instances: 1
+    networks:
+      - name: cf2
+
+  - name: ha_proxy_z1
+    instances: 1
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(3) ))
+
+  - name: etcd_z1
+    instances: 2
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(14, 15) ))
+
+  - name: etcd_z2
+    instances: 1
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(13) ))
+
+  - name: consul_z1
+    instances: 2
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(17, 18, 19) ))
+
+  - name: consul_z2
+    instances: 1
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(17, 18, 19) ))
+
+  - name: smoke_tests
+    instances: 1
+
+properties:
+  <<: (( merge ))
+  system_domain_organization: pivotal
+
+  ccdb:
+    db_scheme: postgres
+    address: (( properties.databases.address ))
+    port: 5524
+    roles:
+      - tag: admin
+        name: ccadmin
+        password: admin
+    databases:
+      - tag: cc
+        name: ccdb
+        citext: true
+
+  uaadb:
+    db_scheme: postgresql
+    address: (( properties.databases.address ))
+    port: 5524
+    roles:
+      - tag: admin
+        name: uaaadmin
+        password: admin
+    databases:
+      - tag: uaa
+        name: uaadb
+        citext: true
+
+  databases:
+    db_scheme: postgres
+    address: (( jobs.postgres_z1.networks.cf1.static_ips.[0] ))
+    port: 5524
+    roles:
+      - tag: admin
+        name: ccadmin
+        password: admin
+      - tag: admin
+        name: uaaadmin
+        password: admin
+      - tag: admin
+        name: diego
+        password: admin
+    databases:
+      - tag: cc
+        name: ccdb
+        citext: true
+      - tag: uaa
+        name: uaadb
+        citext: true
+      - tag: diego
+        name: diego
+        citext: false
+    collect_statement_statistics: null
+    additional_config: (( merge || nil ))
