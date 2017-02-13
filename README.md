@@ -45,9 +45,9 @@
 - 3가지 타입의 Bosh - bosh-lite, micro-bosh, full-bosh- 중에 bosh-lite 타입은 모니터링 시스템에서 지원하지 않는다.
 - Bosh 및 PaaS-TA Controller 및 Container 2.0 서비스 설치는 [플랫폼 자동화 설치](https://github.com/OpenPaaSRnD/Documents-PaaSTA-2.0/blob/master/Install-Guide/Platform%20Install%20System/PaaS-TA_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EC%84%A4%EC%B9%98_%EC%9E%90%EB%8F%99%ED%99%94_%EC%84%A4%EC%B9%98_%EA%B0%80%EC%9D%B4%EB%93%9C.md)를 참조한다.
 - Bosh 및 PaaS-TA Controller 및 Container 2.0 서비스 설치 완료 후 아래 서비스를 설치한다.
-  1. paasta-influxdb-grafana-2.0 서비스 설치
-  2. paasta-logsearch-2.0 서비스 설치
-  3. paasta-metrics-collector-2.0 서비스 설치
-  4. paasta-monitoring-agent-2.0 서비스 설치
-     [Bosh Monitoring Agent 설치 참조](https://github.com/OpenPaaSRnD/Documents-PaaSTA-2.0/blob/master/Install-Guide/BOSH/Bosh%20Monitoring%20Agent%20%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C_v1.0.md)
-  5. paasta-alarm-service-2.0 서비스 설치
+1. paasta-influxdb-grafana-2.0 서비스 설치
+2. paasta-logsearch-2.0 서비스 설치
+3. paasta-metrics-collector-2.0 서비스 설치
+4. paasta-monitoring-agent-2.0 서비스 설치 <br>
+   [Bosh Monitoring Agent 설치 참조](https://github.com/OpenPaaSRnD/Documents-PaaSTA-2.0/blob/master/Install-Guide/BOSH/Bosh%20Monitoring%20Agent%20%EC%84%A4%EC%B9%98%20%EA%B0%80%EC%9D%B4%EB%93%9C_v1.0.md)
+5. paasta-alarm-service-2.0 서비스 설치
