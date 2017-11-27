@@ -1,0 +1,23 @@
+iaas_settings:
+  stemcell:
+    name: bosh-warden-boshlite-ubuntu-trusty-go_agent
+    version: latest
+  compilation_cloud_properties: {}
+  resource_pool_cloud_properties:
+  - name: errand
+    cloud_properties: {}
+  subnet_configs:
+  - name: rootfs-smoke-test
+    type: manual
+    subnets:
+    - range: 10.244.30.0/30
+      reserved:
+      - 10.244.30.1
+      static: []
+      cloud_properties: {}
+    - range: 10.244.30.4/30
+      reserved:
+      - 10.244.30.5
+      static: []
+      cloud_properties: {}
+

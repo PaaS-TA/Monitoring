@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+ROOTFS_RELEASE=$(dirname $0)/..
+ROOTFS_SMOKE_TEST_MANIFEST=${ROOTFS_RELEASE}/manifests/bosh-lite/rootfs-smoke-test.yml
+
+DIRECTOR_UUID=$(bosh status --uuid)
+
+mkdir -p $(dirname ${ROOTFS_SMOKE_TEST_MANIFEST})
+
+spiff merge \
+  ${ROOTFS_RELEASE}/manifest-generation/misc-templates/bosh-mask.yml \
+  ${ROOTFS_RELEASE}/manifest-generation/rootfs-smoke-test.yml \
+  <(echo "director_uuid: ${DIRECTOR_UUID}") \
+  ${ROOTFS_RELEASE}/manifest-generation/bosh-lite-stubs/iaas-settings.yml \
+  ${ROOTFS_RELEASE}/manifest-generation/bosh-lite-stubs/property-overrides.yml \
+  > ${ROOTFS_SMOKE_TEST_MANIFEST}
+
