@@ -1,0 +1,148 @@
+package services
+
+import (
+	"strings"
+	"sync"
+	"encoding/json"
+
+	"github.com/cloudfoundry/noaa/consumer"
+	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/pivotal-golang/lager"
+	"com/crossent/monitoring/metrics_collector/util"
+
+)
+
+const firehoseSubscriptionId string = "firehose-prototype"
+
+type FirehoseConsumer struct {
+	logger 		lager.Logger
+	consumer 	*consumer.Consumer
+	token		string
+	msgChan 	<-chan *events.Envelope
+	errChan		<-chan error
+	uaaUrl		string
+	client_id 	string
+	client_pass 	string
+	logstashUrl	string
+	retry 		bool
+}
+
+func NewFiehoseConsumer(logger lager.Logger, consumer *consumer.Consumer, token, uaaUrl, client_id, client_pass, logstashUrl string) *FirehoseConsumer{
+	return &FirehoseConsumer{
+		logger:		logger,
+		consumer:	consumer,
+		token:		token,
+		uaaUrl:		uaaUrl,
+		client_id: 	client_id,
+		client_pass: 	client_pass,
+		logstashUrl:	logstashUrl,
+		retry:		false,
+	}
+}
+
+func (f *FirehoseConsumer) SetToken(token string) {
+	f.token = token
+}
+
+func (f *FirehoseConsumer) GetMetricsStream(index int) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	f.msgChan, f.errChan = f.consumer.Firehose(firehoseSubscriptionId, f.token)
+
+	go func(wg *sync.WaitGroup){
+		defer wg.Done()
+		f.SendMetricsToLogStash(index)
+	}(&wg)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		f.ErrorHandling(index)
+	}(&wg)
+	wg.Wait()
+	f.logger.Debug("# metrics_collector.GetMetricsStream end ...")
+}
+
+func (f *FirehoseConsumer) SendMetricsToLogStash(index int)  {
+	f.logger.Info("SendMetricsToLogStash")
+
+	// Make client
+	client, err := util.NewUDPClient(f.logger, f.logstashUrl)
+	if err != nil {
+		f.logger.Error("#metrics_collector.SendMetricsToInfluxDb  : There is an error during creating UDP Client:", err)
+		return
+	}
+	if err = client.Connect(); err != nil {
+		f.logger.Error("#metrics_collector.SendMetricsToInfluxDb  : There is an error during connecting LogStash to store metrics:", err)
+		return
+	}
+
+	var name string
+	var value , delta, total float64 //, count float64
+
+	//rawDataArray := make([]byte, 500)
+	for msg := range f.msgChan {
+		job_zone := strings.Split(*msg.Job, "_")
+
+		//f.logger.Info("metrics msg", map[string]interface{}{"metrics": msg})
+		if msg.ValueMetric != nil {
+			//f.logger.Info("ValueMetric metrics - name & value & unit:", map[string]interface{}{"name":*msg.ValueMetric.Name, "value":strconv.FormatFloat(*msg.ValueMetric.Value, 'f', 6, 64), "unit":*msg.ValueMetric.Unit})
+			name = *msg.ValueMetric.Name
+			value = *msg.ValueMetric.Value //strconv.FormatFloat(*msg.ValueMetric.Value, 'f', 6, 64)
+		}else if msg.CounterEvent != nil {
+			//f.logger.Info("CounterEvent metrics - name & value & unit:", map[string]interface{}{"name":*msg.CounterEvent.Name, "delta":*msg.CounterEvent.Delta, "total":*msg.CounterEvent.Total})
+			name = *msg.CounterEvent.Name
+			delta = float64(*msg.CounterEvent.Delta)
+			total = float64(*msg.CounterEvent.Total)
+		}
+
+		// Create a point and add to batch
+		//Set Tags - origin, eventtype, job, zone, index
+		metricData := map[string]interface{}{
+			"origin": *msg.Origin,
+			"eventtype": msg.EventType.String(),
+			"job": job_zone[0],
+			"zone":job_zone[1],
+			"index":*msg.Index,
+			"metricname": name,
+			"ip": *msg.Ip,
+			"value": value,
+			"delta": delta,
+			"total": total,
+		}
+		rawData, err := json.Marshal(metricData)
+		if err != nil{
+			f.logger.Error("#metrics_collector.SendMetricsToInfluxDb  : error - convert Map to JSON", err)
+		}else{
+			//Need Buffering ??
+			client.Write(rawData)
+			f.logger.Debug("data", lager.Data{"rawData":string(rawData)})
+		}
+		value = 0.0
+		delta = 0.0
+		total = 0.0
+		//count++
+	}
+	f.logger.Info("# metrics_collector.SendMetricsToInfluxDb end ...")
+	return
+}
+
+func (f *FirehoseConsumer) ErrorHandling(k int) {
+	//Set retryCount for reconnect firehose.
+	for err := range f.errChan {
+	//if unexpected Error Happened, noaa firehose retryAction called.
+		f.logger.Error("# metrics_collector.ErroHandling : ", err)
+		if strings.Contains(err.Error(), "Unauthorized")  {
+			cf_token, err := util.GetCFToken(f.logger,f.uaaUrl,f.client_id,f.client_pass)
+			if err != nil {
+				f.logger.Error("# noaa_agent.ErroHandling : There is an error hannpend getting user token", err)
+				//f.errChan <- errors.New("Unauthorized")
+			}else {
+				f.consumer.Close()
+				f.SetToken(cf_token)
+				f.GetMetricsStream(k)
+			}
+		} else {
+			return
+		}
+	}
+}

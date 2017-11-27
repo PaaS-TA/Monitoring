@@ -1,0 +1,110 @@
+---
+compilation:
+  cloud_properties:
+    name: random
+    instance_type: monitoring
+    availability_zone: nova
+  network: cf1
+  reuse_compilation_vms: true
+  workers: 1
+
+director_uuid: 2cdc3280-ea6c-421d-ba25-d718d25236aa
+
+meta:
+  environment: openstack-mc
+  floating_static_ips:
+  - 115.68.151.190
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+
+jobs:
+- instances: 1
+  name: metrics_collector_z1
+  networks:
+  - name: cf1
+    static_ips: 
+    - 10.244.0.161
+    #- 10.244.0.162
+  properties: {}
+  resource_pool: metrics-collector
+  templates:
+  - name: metrics_collector
+    release: metrics-collector
+  update:
+    max_in_flight: 1
+    serial: true
+
+name: metrics-collector
+
+networks:
+
+- name: provider 
+  type: vip
+  cloud_properties:
+    net_id: bb29696d-c0af-4a98-9108-edd23b27c493
+    security_groups: [bosh]
+
+- name: cf1
+  type: manual
+  subnets:
+  - cloud_properties:
+      name: random
+      net_id: b7c8c08f-2d3b-4a86-bd10-641cb6faa317
+      security_groups: [bosh]
+    range: 10.244.0.0/24
+    gateway: 10.244.0.1
+    reserved:
+    - 10.244.0.2 - 10.244.0.90
+    - 10.244.0.200 - 10.244.0.254
+    dns:
+    - 164.124.101.2
+    static:
+    - 10.244.0.110 - 10.244.0.175
+
+properties:
+  openstack: &openstack
+      auth_url: http://115.68.151.175:5000/v3
+      username: admin
+      api_key: cfmonit
+      project: admin
+      domain: default
+      region: RegionOne
+      default_key_name: monitoring
+      default_security_groups: [bosh]
+  syslog_daemon_config:
+    address: null
+    port: null
+  metrics_collector:
+    uaaUrl:    clientId: cf
+    clientPass: null
+    influx:
+      url: 115.68.151.181:8089
+      database: cf_metric_db
+      cf_measurement: cf_metrics
+      cf_process_measurement : cf_process_metrics
+    dopplerUrl:
+    - wss://doppler.bosh-lite.com:443
+    log_level: debug
+
+releases:
+- name: metrics-collector
+  version: latest
+
+resource_pools:
+- cloud_properties:
+    name: random
+    instance_type: monitoring
+    availability_zone: nova
+  name: metrics-collector
+  network: cf1 
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+
+update:
+  canaries: 1
+  canary_watch_time: 30000-100000
+  max_errors: 1
+  max_in_flight: 1
+  update_watch_time: 30000-100000

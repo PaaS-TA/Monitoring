@@ -1,0 +1,81 @@
+package handler
+
+import (
+	"os"
+	"sync"
+	"crypto/tls"
+"fmt"
+
+	"code.cloudfoundry.org/lager"
+
+	"github.com/tedsuo/ifrit"
+	"github.com/cloudfoundry/noaa/consumer"
+	"github.com/cloudfoundry/sonde-go/events"
+
+	"com/crossent/monitoring/metrics_collector/services"
+)
+
+type metrics_collector_server struct {
+	logger		lager.Logger
+	dopplerArray 	[]string
+	cf_token	string
+	uaaUrl		string
+	client_id	string
+	client_pass 	string
+	influxCon 	*services.InfluxConfig
+}
+
+func New(logger lager.Logger, dopplerArray []string, cf_token , uaaUrl, client_id, client_pass string, influxCon *services.InfluxConfig) ifrit.Runner {
+	return &metrics_collector_server{
+		logger: logger,
+		dopplerArray: dopplerArray,
+		cf_token: cf_token,
+		uaaUrl: uaaUrl,
+		client_id: client_id,
+		client_pass: client_pass,
+		influxCon: influxCon,
+	}
+}
+
+
+func (n *metrics_collector_server) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	//===============================================================
+	//catch or finally
+	/*defer func() { //catch or finally
+		if err := recover(); err != nil { //catch
+
+			os.Exit(0)
+		}
+	}()*/
+	//===============================================================
+	close(ready)
+
+	var wg sync.WaitGroup
+	wg.Add(len(n.dopplerArray))
+	for i, dopplerUrl := range n.dopplerArray {
+		go func(wg *sync.WaitGroup, index int, url string) {
+			//consumer := noaa.NewConsumer(url, &tls.Config{InsecureSkipVerify: true}, nil)
+fmt.Println("##### doppler url :", url)
+			consumer := consumer.New(url, &tls.Config{InsecureSkipVerify: true}, nil)
+			/*
+			// Close channel at metrics_collector.GetMetricsStream func.
+			*/
+			metrics_collector := services.NewFiehoseConsumer(n.logger, consumer, n.cf_token, n.uaaUrl, n.client_id, n.client_pass, n.influxCon)
+			metrics_collector.GetMetricsStream(index)
+
+			defer wg.Done()
+		}(&wg, i, dopplerUrl)
+	}
+	wg.Wait()
+	return nil
+}
+
+func createNewMessageChannel() chan *events.Envelope{
+	msgChan := make(chan *events.Envelope, 100)
+	return msgChan
+}
+
+func createNewErrorChannel() chan error {
+	errChan := make(chan error)
+	return errChan
+}
