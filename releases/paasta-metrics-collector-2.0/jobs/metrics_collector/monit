@@ -1,5 +1,0 @@
-check process metrics_collector
-  with pidfile /var/vcap/sys/run/metrics_collector/metrics_collector.pid
-  start program "/var/vcap/jobs/metrics_collector/bin/metrics_collector_ctl start"
-  stop program "/var/vcap/jobs/metrics_collector/bin/metrics_collector_ctl stop"
-  group vcap
