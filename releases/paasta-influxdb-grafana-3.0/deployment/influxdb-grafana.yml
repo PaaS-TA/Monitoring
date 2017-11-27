@@ -1,0 +1,163 @@
+---
+name: influxdb-grafana
+
+compilation:
+  cloud_properties:
+    name: random
+    instance_type: monitoring
+    availability_zone: nova
+  network: selfservice
+  reuse_compilation_vms: true
+  workers: 6
+
+director_uuid: 2cdc3280-ea6c-421d-ba25-d718d25236aa
+
+meta:
+  environment: openstack-ingr
+  floating_static_ips:
+  - 115.68.151.190
+
+releases:
+- {name: cf-monitoring, version: latest}
+
+disk_pools:
+- cloud_properties:
+    type: SSD1
+  disk_size: 40240 
+  name: influx_data
+
+jobs:
+- name: influxdb
+  templates:
+  - {name: influxdb, release: cf-monitoring}
+  instances: 1
+  resource_pool: influx
+  persistent_disk_pool: influx_data
+#  persistent_disk: 60024
+  networks:
+  - default:
+    - gateway
+    - dns
+    name: selfservice
+    static_ips:
+    - 172.16.1.151
+  - name: provider
+    static_ips:
+    - 115.68.151.181 
+  properties:
+    openstack: &openstack
+      auth_url: http://115.68.151.175:5000/v3
+      username: admin
+      api_key: cfmonit
+      project: admin
+      domain: default
+      region: RegionOne
+      default_key_name: monitoring
+      default_security_groups: [bosh]
+    influxdb:
+      database: container_metric_db
+      user: root
+      password: root
+#      retention: 14d
+      replication: 1      
+      ips: 172.16.1.151
+      
+- name: grafana
+  templates:
+  - {name: grafana, release: cf-monitoring}
+  instances: 1
+  resource_pool: grafana
+  networks:
+  - default:
+    - gateway
+    - dns
+    name: selfservice
+    static_ips:
+    - 172.16.1.153
+  #- name: provider
+    #static_ips:
+    #- 115.68.151.183
+   
+  properties:
+    openstack: &openstack
+      auth_url: http://115.68.151.175:5000/v3
+      username: admin
+      api_key: cfmonit
+      project: admin
+      domain: default
+      region: RegionOne
+      default_key_name: monitoring
+      default_security_groups: [bosh]
+    grafana:
+      listen_port: 3000
+      admin_username: admin
+      admin_password: cfmonitor
+      users: 
+        allow_sign_up: true
+        auto_assign_organization: true
+        
+      datasource:
+        url: http://172.16.1.151:8086/
+        name: Grafanadb
+        database_type: Influxdb
+        user: root
+        password: root
+        database_name: container_metric_db
+        
+        
+networks:
+
+#Floating ip name in openstack
+
+- name: provider 
+  type: vip
+  cloud_properties:
+    net_id: bb29696d-c0af-4a98-9108-edd23b27c493
+    security_groups: [bosh]
+
+
+- name: selfservice
+  subnets:
+  - cloud_properties:
+      name: random
+      net_id: b7c8c08f-2d3b-4a86-bd10-641cb6faa317
+      security_groups: [bosh]
+    range: 172.16.1.0/24
+    gateway: 172.16.1.1
+    reserved:
+    - 172.16.1.2 - 172.16.1.100
+    - 172.16.1.200 - 172.16.1.254
+    dns:
+    - 172.16.1.12
+#    - 164.124.101.2
+    static:
+    - 172.16.1.110 - 172.16.1.175
+  type: manual
+  
+resource_pools:
+- cloud_properties:
+    name: random
+    instance_type: m1.xlarge 
+    availability_zone: nova
+  name: influx
+  network: selfservice
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    name: random
+    instance_type: monitoring
+    availability_zone: nova
+  name: grafana
+  network: selfservice 
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+
+update:
+  canaries: 1
+  canary_watch_time: 1000-180000
+  max_in_flight: 1
+  serial: true
+  update_watch_time: 1000-180000
+

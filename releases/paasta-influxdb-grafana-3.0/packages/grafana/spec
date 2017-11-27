@@ -1,0 +1,8 @@
+---
+name: grafana
+
+dependencies: []
+
+files:
+- grafana/*.tar.gz
+- pid_utils.sh

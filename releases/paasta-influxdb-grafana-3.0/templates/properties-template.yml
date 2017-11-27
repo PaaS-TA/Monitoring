@@ -1,0 +1,3 @@
+properties:
+  influxdb:
+    ips: (( jobs.influxdb.networks.default.static_ips ))

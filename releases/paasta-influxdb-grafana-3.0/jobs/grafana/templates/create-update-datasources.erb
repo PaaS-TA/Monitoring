@@ -1,0 +1,85 @@
+#!/bin/bash
+
+LOG_DIR=/var/vcap/sys/log/grafana
+
+<%
+  datasources = Array.new
+
+  if_p("grafana.datasources") do |dss|
+    datasources = dss
+  end
+
+  if_p("grafana.datasource.url") do |ds|
+    datasources << {
+      "url" => p("grafana.datasource.url"),
+      "name" => p("grafana.datasource.name"),
+      "database_type" => p("grafana.datasource.database_type"),
+      "user" => p("grafana.datasource.user"),
+      "password" => p("grafana.datasource.password"),
+      "database_name" => p("grafana.datasource.database_name")
+    }
+  end
+%>
+
+exec &>> ${LOG_DIR}/create-update-datasources.log
+
+URL='<%= p("grafana.ssl.cert", nil) ? "https" : "http" %>://127.0.0.1:<%= p("grafana.listen_port") %>/api/datasources'
+CREDENTIALS='<%= p("grafana.admin_username") %>:<%= p("grafana.admin_password") %>'
+
+attempt=0
+exitCode=0
+while (( $attempt < 3 ))
+do
+  curl --connect-timeout 10 -u "${CREDENTIALS}" -ks "${URL}"
+  exitCode=$?
+  if [[ $exitCode == 0 ]]
+  then
+    break
+  fi
+
+  echo -e "\nCannot connect to Grafana. Retrying ..."
+  sleep 10
+  attempt=$(( attempt + 1 ))
+done
+if [[ $exitCode != 0 ]]
+then
+  echo -e "\nError: Cannot connect to Grafana after 3 retries."
+  exit 1
+fi
+
+<% datasources.each do |datasource| %>
+echo -e "\nCreating/Updating datasource '<%= datasource['name'] %>' at $(date)"
+
+DATASOURCE_NAME='<%= datasource['name'] %>'
+
+DATA='
+{"name":"'"${DATASOURCE_NAME}"'",
+ "type":"<%= datasource['database_type'] %>",
+ "access":"proxy",
+ "url":"<%= datasource['url'] %>",
+ "password":"<%= datasource['password'] %>",
+ "user":"<%= datasource['user'] %>",
+ "database":"<%= datasource['database_name'] %>",
+ "basicAuth":false
+}'
+
+# If we had jq, this is what the query would look like:
+#DATASOURCE_ID=$(curl -u "${CREDENTIALS}" -ks "${URL}" | jq '.[] | select(.name == "'"${DATASOURCE_NAME}"'") | .id ')
+# Instead we have to call sed to the rescue:
+DATASOURCE_ID=$(curl -u "${CREDENTIALS}" -ks "${URL}" | sed -n 's/^.*"id":\([0-9]*\)[^}]*"name":"'${DATASOURCE_NAME}'".*$/\1/p' )
+echo "Datasource '${DATASOURCE_NAME}' has id '${DATASOURCE_ID}'"
+
+if [ -n "${DATASOURCE_ID}" ]; then
+  if curl -u "${CREDENTIALS}" -kivf -X PUT "${URL}/${DATASOURCE_ID}" -H 'Content-Type: application/json' -d "${DATA}" ; then
+    echo -e "\nUpdated datasource ${DATASOURCE_NAME} at $(date)"
+  fi
+else
+  if curl -u "${CREDENTIALS}" -kivf -X POST "${URL}" -H 'Content-Type: application/json' -d "${DATA}" ; then
+    echo -e "\nCreated datasource ${DATASOURCE_NAME} at $(date)"
+  fi
+fi
+<% end #each iterator %>
+
+<% if datasources.empty? then %>
+echo "No automatic datasource creation requested"
+<% end %>

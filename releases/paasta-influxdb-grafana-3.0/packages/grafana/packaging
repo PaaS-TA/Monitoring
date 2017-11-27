@@ -1,0 +1,5 @@
+set -e -u -x
+
+tar --strip-components=1 -zxf grafana/grafana*.tar.gz -C ${BOSH_INSTALL_TARGET}
+
+cp pid_utils.sh ${BOSH_INSTALL_TARGET}

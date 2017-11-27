@@ -1,0 +1,8 @@
+---
+name: influxdb
+
+dependencies:
+- golang
+
+files:
+- influxdb/**/*
