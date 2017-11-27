@@ -1,8 +1,0 @@
----
-name: egov-buildpack
-templates: {}
-
-packages:
-- egov-buildpack
-
-properties: {}

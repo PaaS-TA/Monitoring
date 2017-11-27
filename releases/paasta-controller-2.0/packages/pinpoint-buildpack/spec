@@ -1,4 +1,0 @@
----
-name: pinpoint-buildpack
-files:
-- pinpoint-buildpack/java-buildpack-offline-pinpoint*.zip

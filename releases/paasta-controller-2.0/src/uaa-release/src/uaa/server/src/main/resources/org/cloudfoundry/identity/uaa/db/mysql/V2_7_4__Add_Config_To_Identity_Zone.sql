@@ -1,1 +1,0 @@
-ALTER TABLE identity_zone ADD COLUMN config LONGTEXT DEFAULT NULL;

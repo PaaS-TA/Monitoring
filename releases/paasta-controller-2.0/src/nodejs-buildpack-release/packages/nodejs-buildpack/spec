@@ -1,4 +1,0 @@
----
-name: nodejs-buildpack
-files:
-- nodejs-buildpack/nodejs_buildpack-cached-*.zip

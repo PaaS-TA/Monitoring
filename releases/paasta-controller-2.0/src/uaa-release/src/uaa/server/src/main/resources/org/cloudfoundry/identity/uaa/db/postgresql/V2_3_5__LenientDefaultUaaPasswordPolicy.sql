@@ -1,1 +1,0 @@
-UPDATE identity_provider SET config=NULL WHERE origin_key='uaa' AND identity_zone_id <> 'uaa';

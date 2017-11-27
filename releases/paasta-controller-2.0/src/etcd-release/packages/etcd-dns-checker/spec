@@ -1,8 +1,0 @@
----
-name: etcd-dns-checker
-
-dependencies:
-  - golang1.7
-
-files:
-  - etcd-dns-checker/**/*.go

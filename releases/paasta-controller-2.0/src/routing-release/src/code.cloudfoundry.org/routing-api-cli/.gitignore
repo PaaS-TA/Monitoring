@@ -1,9 +1,0 @@
-rtr
-out
-*.o
-*.a
-*.so
-*.exe
-*.test
-*.prof
-.idea

@@ -1,4 +1,0 @@
----
-name: python-buildpack
-files:
-- python-buildpack/python_buildpack-cached-*.zip

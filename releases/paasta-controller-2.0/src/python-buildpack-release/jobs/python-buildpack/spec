@@ -1,8 +1,0 @@
----
-name: python-buildpack
-templates: {}
-
-packages:
-- python-buildpack
-
-properties: {}

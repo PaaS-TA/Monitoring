@@ -1,4 +1,0 @@
----
-name: egov-buildpack
-files:
-- egov-buildpack/egov-java-buildpack-offline-egov*.zip

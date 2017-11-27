@@ -1,3 +1,0 @@
-set -e -x
-
-cp -a etcd-common/* ${BOSH_INSTALL_TARGET}

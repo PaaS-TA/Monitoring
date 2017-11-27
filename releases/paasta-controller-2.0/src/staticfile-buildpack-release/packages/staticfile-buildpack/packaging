@@ -1,2 +1,0 @@
-    set -e -x
-    cp staticfile-buildpack/staticfile_buildpack-cached-*.zip ${BOSH_INSTALL_TARGET}

@@ -1,9 +1,0 @@
-#!/bin/bash
-
-pushd $(dirname $0) > /dev/null
-  SCRIPT_DIR=$(pwd)
-popd > /dev/null
-
-if ! type git-hooks > /dev/null 2>&1; then
-  ln -fs ${SCRIPT_DIR}/../githooks/pre-commit/recovered-hook ${SCRIPT_DIR}/../.git/hooks/pre-commit
-fi

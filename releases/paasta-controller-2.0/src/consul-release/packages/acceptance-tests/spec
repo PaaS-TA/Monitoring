@@ -1,8 +1,0 @@
----
-name: acceptance-tests
-
-dependencies:
-  - golang1.7
-
-files:
- - acceptance-tests/**/*

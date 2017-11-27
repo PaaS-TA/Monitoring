@@ -1,3 +1,0 @@
-set -e -x
-cp egov-buildpack/egov-java-buildpack-offline-egov*.zip ${BOSH_INSTALL_TARGET}
-

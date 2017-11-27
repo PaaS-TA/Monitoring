@@ -1,2 +1,0 @@
-set -e -x
-cp pinpoint-buildpack/java-buildpack-offline-pinpoint*.zip ${BOSH_INSTALL_TARGET}

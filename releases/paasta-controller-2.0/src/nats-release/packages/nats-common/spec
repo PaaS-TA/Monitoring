@@ -1,4 +1,0 @@
----
-name: nats-common
-files:
-- nats-common/utils.sh
