@@ -1,0 +1,21 @@
+---
+name: consul-test-consumer-windows
+templates:
+  pre-start.ps1.erb: bin/pre-start.ps1
+  dns_health_check.ps1: bin/dns_health_check.ps1
+
+packages:
+  - acceptance-tests-windows
+
+consumes:
+- name: dns
+  type: dns
+  optional: true
+
+properties:
+  consul-test-consumer.nameserver:
+    description: "Nameserver to use to mock out responses/response times"
+    default: ""
+  consul-test-consumer.require_ssl:
+    description: "Require SSL to talk with local consul agent"
+    default: false

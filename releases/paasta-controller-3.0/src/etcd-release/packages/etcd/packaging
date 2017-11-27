@@ -1,0 +1,4 @@
+set -e -x
+
+tar xzf etcd/etcd-*-linux-amd64.tar.gz
+cp -R etcd-*-linux-amd64/* ${BOSH_INSTALL_TARGET}

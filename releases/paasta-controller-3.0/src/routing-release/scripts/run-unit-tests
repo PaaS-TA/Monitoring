@@ -1,0 +1,102 @@
+#!/bin/bash
+set -e -x
+
+PACKAGE=$1
+
+function printStatus {
+  if [ $? -eq 0 ]; then
+    echo -e "\nSWEET SUITE SUCCESS"
+  else
+    echo -e "\nSUITE FAILURE"
+  fi
+}
+
+trap printStatus EXIT
+
+bin_dir=$(dirname $0)/../bin
+
+tmpdir=$(mktemp -d /tmp/cf-routing-downloads.XXXX)
+
+run_go_vet() {
+  for component in "$@"
+  do
+    pushd $component
+      go vet ./...
+    popd
+  done
+}
+
+if uname -a | grep Darwin; then OS=darwin; else OS=linux; fi
+
+# get consul if needed
+set +e
+consul --version
+consul_status=$?
+set -e
+if [ ${consul_status} -ne 0 ]; then
+  curl -L -o ${tmpdir}/consul-0.6.3.zip "https://releases.hashicorp.com/consul/0.6.3/consul_0.6.3_${OS}_amd64.zip"
+  unzip -o ${tmpdir}/consul-0.6.3.zip -d ./${bin_dir}
+  rm ${tmpdir}/consul-0.6.3.zip
+fi
+
+# install etcd if needed
+set +e
+etcd --version
+etcd_status=$?
+set -e
+if [ ${etcd_status} -ne 0 ]; then
+  if [ "$OS" == darwin ]; then
+    pushd src/github.com/coreos/etcd
+      git checkout v2.1.1
+      go install .
+      git checkout -
+    popd
+  else
+   OUTPUT="etcd-v2.1.1-linux-amd64.tar.gz"
+   curl -L "https://github.com/coreos/etcd/releases/download/v2.1.1/etcd-v2.1.1-linux-amd64.tar.gz" -o ${OUTPUT}
+   tar -xzf ${OUTPUT} -C /tmp
+   mv /tmp/etcd-v2.1.1-linux-amd64/etcd $GOPATH/bin
+   rm -rf ${OUTPUT}
+   rm -rf /tmp/etcd-v2.1.1-linux-amd64
+  fi
+fi
+
+GINKGO_FLAGS="ginkgo -r -race -keepGoing -p -trace -randomizeAllSpecs -progress  --nodes 4"
+
+export PATH=$PATH:$PWD/bin
+go get github.com/nats-io/gnatsd
+go get github.com/onsi/ginkgo/ginkgo
+go get github.com/onsi/gomega
+
+echo $PACKAGE
+if [ -n "$PACKAGE" ]; then
+  $GINKGO_FLAGS "./src/code.cloudfoundry.org/${PACKAGE}"
+else
+  pushd src/code.cloudfoundry.org
+      $GINKGO_FLAGS uaa-go-client
+
+      $GINKGO_FLAGS multierror routing-api-cli
+
+      $GINKGO_FLAGS -skipPackage=cmd/routing-api routing-api
+
+      $GINKGO_FLAGS -v routing-api/cmd/routing-api
+
+      # Run go vet after ginkgo so that all necessary packages are compiled
+      run_go_vet tcp-emitter
+
+      $GINKGO_FLAGS cf-tcp-router tcp-emitter route-registrar
+  popd
+
+  pushd src/code.cloudfoundry.org/gorouter
+    # Build gorouter source code to verify no errors
+    go build -race .
+
+    go vet ./...
+
+    $GINKGO_FLAGS
+    popd
+fi
+
+if [ "$OS" == linux ]; then
+  rm -rf $GOPATH/bin/{gnatsd,ginkgo,etcd}
+fi

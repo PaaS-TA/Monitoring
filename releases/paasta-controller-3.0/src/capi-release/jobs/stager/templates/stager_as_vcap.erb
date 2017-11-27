@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+LOG_DIR=/var/vcap/sys/log/stager
+CONF_DIR=/var/vcap/jobs/stager/config
+
+exec /var/vcap/packages/stager/bin/stager -configPath "${CONF_DIR}/stager_config.json" \
+  2> >(tee -a $LOG_DIR/stager.stderr.log | logger -p user.error -t vcap.stager) \
+  1> >(tee -a $LOG_DIR/stager.stdout.log | logger -p user.info -t vcap.stager)
+

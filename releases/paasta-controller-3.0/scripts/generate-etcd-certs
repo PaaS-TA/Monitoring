@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -e -x
+
+scripts_folder=$(dirname $0)
+
+# Install certstrap
+go get -v github.com/square/certstrap
+
+# Place keys and certificates here
+depot_path="etcd-certs"
+mkdir -p ${depot_path}
+
+# CA to distribute to etcd clients and servers
+${scripts_folder}/generate_ca_cert --common-name "etcdCA" --depot-path ${depot_path} --output-file etcd-ca
+
+# Server certificate to share across the etcd cluster
+${scripts_folder}/generate_end_entity_certs --common-name "cf-etcd.service.cf.internal" --ca-name etcd-ca --domain '*.cf-etcd.service.cf.internal,cf-etcd.service.cf.internal' --depot-path ${depot_path} --output-file server
+
+# Client certificate to distribute to jobs that access etcd
+${scripts_folder}/generate_end_entity_certs --common-name "clientName" --ca-name etcd-ca --depot-path ${depot_path} --output-file client
+
+# CA to distribute across etcd peers
+${scripts_folder}/generate_ca_cert --common-name "peerCA" --depot-path ${depot_path} --output-file peer-ca
+
+# Client certificate to distribute across etcd peers
+${scripts_folder}/generate_end_entity_certs --common-name cf-etcd.service.cf.internal --domain '*.cf-etcd.service.cf.internal,cf-etcd.service.cf.internal' --ca-name peer-ca --depot-path ${depot_path} --output-file peer

@@ -1,0 +1,66 @@
+#!/bin/bash -exu
+
+function main() {
+  source /var/vcap/jobs/postgres/bin/pgconfig.sh
+  source /var/vcap/jobs/postgres/bin/utils.sh
+
+  if [ ! -d "${STORE_DIR}" ]; then
+    echo "ERROR: storage directory doesn't exist"
+    echo "Please add persistent disk to this job"
+    exit 1
+  fi
+
+  if [ -d $DATA_DIR -a -f $POSTGRES_UPGRADE_LOCK ]; then
+    echo "FAIL: DB upgrade stopped in the middle, manual intervention required, quitting..."
+    exit 1
+  fi
+
+  if [ ! -f "${DATA_DIR}/postgresql.conf" ]; then
+    # initdb creates data directories
+    "${PACKAGE_DIR}/bin/initdb" -E utf8 --locale en_US.UTF-8 -D "${DATA_DIR}"
+
+    mkdir -p "${DATA_DIR}/pg_log"
+  fi
+
+  if [ -d "${DATA_DIR_OLD}" -a -f "${DATA_DIR_OLD}/postgresql.conf" ]; then
+    rm -rf ${DATA_DIR_PREVIOUS}
+    if is_major; then
+      echo "Running a PostgreSQL major upgrade from ${pgversion_upgrade_from} to ${pgversion_current}"
+      touch "$POSTGRES_UPGRADE_LOCK"
+      # Move to a directory writeable by vcap user
+      mkdir -p "${PG_STORE_DIR}/pg_upgrade_tmp"
+      pushd "${PG_STORE_DIR}/pg_upgrade_tmp"
+        "${PACKAGE_DIR}/bin/pg_upgrade" \
+          --old-datadir "${DATA_DIR_OLD}" \
+          --new-datadir "${DATA_DIR}" \
+          --old-bindir "${PACKAGE_DIR_OLD}/bin" \
+          --new-bindir "${PACKAGE_DIR}/bin"
+      popd
+      rm -f "${POSTGRES_UPGRADE_LOCK}"
+    else
+      echo "Running a PostgreSQL minor upgrade from ${pgversion_upgrade_from} to ${pgversion_current}"
+      mkdir -p "${DATA_DIR}"
+      chown -R vcap:vcap "${DATA_DIR}"
+      chmod 700 "${DATA_DIR}"
+
+      pushd "${DATA_DIR_OLD}" > /dev/null
+        cp -r * "${DATA_DIR}"
+      popd > /dev/null
+    fi
+    mv "${DATA_DIR_OLD}" "${DATA_DIR_PREVIOUS}"
+  fi
+
+  cp "${JOB_DIR}/config/postgresql.conf" "${JOB_DIR}/config/pg_hba.conf" "${JOB_DIR}/config/pg_ident.conf" "${DATA_DIR}"
+
+  echo "Starting PostgreSQL: "
+  "${PACKAGE_DIR}/bin/pg_ctl" -o "-h ${HOST} -p ${PORT}" \
+    -w start -D "${DATA_DIR}" -l "${DATA_DIR}/pg_log/startup.log"
+
+  echo "PostgreSQL started successfully"
+
+  create_roles
+  create_databases
+}
+
+
+main

@@ -1,0 +1,4 @@
+---
+name: nodejs-buildpack
+files:
+- nodejs-buildpack/nodejs?buildpack-v*.zip

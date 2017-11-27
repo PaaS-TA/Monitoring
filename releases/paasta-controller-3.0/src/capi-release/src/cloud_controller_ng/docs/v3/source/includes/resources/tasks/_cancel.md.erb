@@ -1,0 +1,40 @@
+### Cancel a task
+
+```
+Example Request
+```
+
+```shell
+curl "https://api.example.org/v3/tasks/[guid]/actions/cancel" \
+  -X POST \
+  -H "Authorization: bearer [token]"
+```
+
+```
+Example Response
+```
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+
+<%= yield_content :canceling_task %>
+```
+
+Cancels a running task.
+
+Canceled tasks will initially be in state `CANCELING` and will move to state `FAILED` once the cancel request has been processed.
+
+Cancel requests are idempotent and will be processed according to the state of the task when the request is executed.
+
+Canceling a task that is in `SUCCEEDED` or `FAILED` state will return an error.
+
+#### Definition
+`POST /v3/tasks/:task_guid/actions/cancel` <br>
+`PUT /v3/tasks/:task_guid/cancel` _(Deprecated)_
+
+#### Allowed Roles
+ |
+--- | ---
+Space Developer |
+Admin |

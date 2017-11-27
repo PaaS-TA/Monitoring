@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+LOG_DIR=/var/vcap/sys/log/nsync
+CONF_DIR=/var/vcap/jobs/nsync/config
+
+exec /var/vcap/packages/nsync/bin/nsync-bulker -configPath "${CONF_DIR}/nsync_bulker_config.json" \
+  2> >(tee -a $LOG_DIR/nsync_bulker.stderr.log | logger -p user.error -t vcap.nsync-bulker) \
+  1> >(tee -a $LOG_DIR/nsync_bulker.stdout.log | logger -p user.info -t vcap.nsync-bulker)

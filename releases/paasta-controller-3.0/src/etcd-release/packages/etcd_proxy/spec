@@ -1,0 +1,8 @@
+---
+name: etcd_proxy
+
+dependencies:
+  - golang1.8
+
+files:
+  - etcd-proxy/**/*.go

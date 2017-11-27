@@ -1,0 +1,48 @@
+### Create a task
+
+```
+Example Request
+```
+
+```shell
+curl "https://api.example.org/v3/apps/[guid]/tasks" \
+  -X POST \
+  -H "Authorization: bearer [token]" \
+  -H "Content-type: application/json" \
+  -d '{ "command": "rake db:migrate" }'
+```
+
+```
+Example Response
+```
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+
+<%= yield_content :single_task %>
+```
+
+#### Definition
+`POST /v3/apps/:app_guid/tasks`
+
+#### Required Parameters
+
+Name | Type | Description
+---- | ---- | -----------
+**command** | _string_ | Command that will be executed
+
+#### Optional Parameters
+
+Name | Type | Description | Default
+---- | ---- | ----------- | -------
+**name** | _string_ | Name of the task. | auto-generated
+**disk_in_mb** | _integer_ | Amount of disk to allocate for the task in MB. | operator-configured `default_app_memory`
+**memory_in_mb** | _integer_ | Amount of memory to allocate for the task in MB. | operator-configured `default_app_disk_in_mb`
+**droplet_guid** | _uuid_ | The guid of the droplet that will be used to run the command. | the app's current droplet
+
+#### Allowed Roles
+ |
+--- | ---
+Space Developer |
+Admin |

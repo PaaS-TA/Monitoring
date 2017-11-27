@@ -1,0 +1,20 @@
+{
+  "processes": [
+    {
+      "name": "consul-test-consumer",
+      "executable": "C:\\var\\vcap\\packages\\acceptance-tests-windows\\bin\\testconsumer.exe",
+      "args": [
+        "--port", "6769",
+        <% if p("consul-test-consumer.require_ssl") %>
+          "--consul-url", "https://127.0.0.1:8500",
+          "--cacert", "C:\\var\\vcap\\jobs\\consul_agent_windows\\config\\certs\\ca.crt",
+          "--cert", "C:\\var\\vcap\\jobs\\consul_agent_windows\\config\\certs\\agent.crt",
+          "--key", "C:\\var\\vcap\\jobs\\consul_agent_windows\\config\\certs\\agent.key",
+        <% else %>
+          "--consul-url", "http://127.0.0.1:8500",
+        <% end %>
+        "--path-to-check-a-record", "C:\\var\\vcap\\packages\\acceptance-tests-windows\\bin\\check-a-record.exe"
+      ]
+    }
+  ]
+}

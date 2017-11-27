@@ -1,0 +1,18 @@
+#!/bin/bash -exu
+set -e
+
+mkdir -p /tmp/go
+export GOPATH=/tmp/go
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.8)
+
+mkdir -p "${BOSH_INSTALL_TARGET}/src/github.com/cloudfoundry-incubator/etcd-release/src/etcd-proxy"
+
+cp -R ${PWD}/etcd-proxy/* "${BOSH_INSTALL_TARGET}/src/github.com/cloudfoundry-incubator/etcd-release/src/etcd-proxy"
+
+export GOROOT="$(readlink -nf /var/vcap/packages/golang1.8)"
+export GOPATH="${BOSH_INSTALL_TARGET}"
+export PATH="${GOROOT}/bin:${PATH}"
+
+go install "github.com/cloudfoundry-incubator/etcd-release/src/etcd-proxy"
+
+chown vcap:vcap "${BOSH_INSTALL_TARGET}/bin/etcd-proxy"

@@ -1,0 +1,27 @@
+---
+platform: linux
+
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfinfrastructure/deployment
+
+inputs:
+- name: postgres-ci-env
+- name: postgres-release
+
+run:
+  path: postgres-release/ci/scripts/deploy-with-cf-old/task.sh
+
+params:
+  BOSH_DIRECTOR:
+  BOSH_PUBLIC_IP:
+  BOSH_CLIENT:
+  BOSH_CLIENT_SECRET:
+  BOSH_CA_CERT:
+  OLD_CF_RELEASE:
+  CF_DEPLOYMENT:
+  API_USER:
+  API_PASSWORD:
+  STEMCELL_VERSION:

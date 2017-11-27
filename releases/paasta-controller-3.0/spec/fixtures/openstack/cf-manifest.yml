@@ -1,0 +1,1839 @@
+compilation:
+  cloud_properties:
+    instance_type: m1.medium
+  network: cf1
+  reuse_compilation_vms: true
+  workers: 6
+director_uuid: DIRECTOR_UUID
+jobs:
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: consul_z1
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.0.137
+  persistent_disk: 1024
+  properties:
+    consul:
+      agent:
+        mode: server
+    metron_agent:
+      zone: z1
+  resource_pool: small_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: metron_agent
+    release: cf
+  update:
+    max_in_flight: 1
+    serial: true
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: consul_z2
+  networks:
+  - name: cf2
+    static_ips: []
+  persistent_disk: 1024
+  properties:
+    consul:
+      agent:
+        mode: server
+    metron_agent:
+      zone: z2
+  resource_pool: small_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: metron_agent
+    release: cf
+  update:
+    max_in_flight: 1
+    serial: true
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: nats_z1
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.0.127
+  properties:
+    metron_agent:
+      zone: z1
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: nats
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: nats_z2
+  networks:
+  - name: cf2
+    static_ips: []
+  properties:
+    metron_agent:
+      zone: z2
+  resource_pool: medium_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: nats
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: etcd_z1
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.0.133
+  persistent_disk: 10024
+  properties:
+    consul:
+      agent:
+        services:
+          etcd:
+            name: cf-etcd
+    metron_agent:
+      zone: z1
+  resource_pool: large_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      etcd: nil
+    name: etcd
+    release: cf
+  - name: etcd_metrics_server
+    release: cf
+  - name: metron_agent
+    release: cf
+  update:
+    max_in_flight: 1
+    serial: true
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: etcd_z2
+  networks:
+  - name: cf2
+    static_ips: []
+  persistent_disk: 10024
+  properties:
+    consul:
+      agent:
+        services:
+          etcd:
+            name: cf-etcd
+    metron_agent:
+      zone: z2
+  resource_pool: large_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      etcd: nil
+    name: etcd
+    release: cf
+  - name: etcd_metrics_server
+    release: cf
+  - name: metron_agent
+    release: cf
+  update:
+    max_in_flight: 1
+    serial: true
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: stats_z1
+  networks:
+  - name: cf1
+  properties:
+    metron_agent:
+      zone: z1
+  resource_pool: small_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: collector
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 0
+  name: nfs_z1
+  networks:
+  - name: cf1
+    static_ips: []
+  persistent_disk: 102400
+  properties:
+    consul:
+      agent:
+        services:
+          blobstore: {}
+    metron_agent:
+      zone: z1
+    route_registrar:
+      routes:
+      - name: blobstore
+        port: 8080
+        registration_interval: 20s
+        tags:
+          component: blobstore
+        uris:
+        - blobstore.SYSTEM_DOMAIN
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: debian_nfs_server
+    release: cf
+  - name: metron_agent
+    release: cf
+  - name: blobstore
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: blobstore_z1
+  networks:
+  - name: cf1
+  persistent_disk: 102400
+  properties:
+    consul:
+      agent:
+        services:
+          blobstore: {}
+    metron_agent:
+      zone: z1
+    route_registrar:
+      routes:
+      - name: blobstore
+        port: 8080
+        registration_interval: 20s
+        tags:
+          component: blobstore
+        uris:
+        - blobstore.SYSTEM_DOMAIN
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: metron_agent
+    release: cf
+  - name: blobstore
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: postgres_z1
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.0.129
+  persistent_disk: 4096
+  properties:
+    metron_agent:
+      zone: z1
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: postgres
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: uaa_z1
+  networks:
+  - name: cf1
+  properties:
+    consul:
+      agent:
+        services:
+          uaa: {}
+    metron_agent:
+      zone: z1
+    route_registrar:
+      routes:
+      - health_check:
+          name: uaa-healthcheck
+          script_path: /var/vcap/jobs/uaa/bin/health_check
+        name: uaa
+        port: 8080
+        registration_interval: 4s
+        tags:
+          component: uaa
+        uris:
+        - uaa.SYSTEM_DOMAIN
+        - '*.uaa.SYSTEM_DOMAIN'
+        - login.SYSTEM_DOMAIN
+        - '*.login.SYSTEM_DOMAIN'
+    uaa:
+      proxy:
+        servers:
+        - 10.10.0.130
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      router: nil
+    name: uaa
+    release: cf
+  - name: metron_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  - name: statsd_injector
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: uaa_z2
+  networks:
+  - name: cf2
+  properties:
+    consul:
+      agent:
+        services:
+          uaa: {}
+    metron_agent:
+      zone: z2
+    route_registrar:
+      routes:
+      - health_check:
+          name: uaa-healthcheck
+          script_path: /var/vcap/jobs/uaa/bin/health_check
+        name: uaa
+        port: 8080
+        registration_interval: 4s
+        tags:
+          component: uaa
+        uris:
+        - uaa.SYSTEM_DOMAIN
+        - '*.uaa.SYSTEM_DOMAIN'
+        - login.SYSTEM_DOMAIN
+        - '*.login.SYSTEM_DOMAIN'
+    uaa:
+      proxy:
+        servers:
+        - 10.10.0.130
+  resource_pool: medium_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      router: nil
+    name: uaa
+    release: cf
+  - name: metron_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  - name: statsd_injector
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: api_z1
+  networks:
+  - name: cf1
+  persistent_disk: 0
+  properties:
+    consul:
+      agent:
+        services:
+          cloud_controller_ng: {}
+    metron_agent:
+      zone: z1
+    nfs_server:
+      address: null
+      allow_from_entries:
+      - 10.10.0.0/24
+      - 10.10.0.0/24
+      share: null
+    route_registrar:
+      routes:
+      - name: api
+        port: 9022
+        registration_interval: 20s
+        tags:
+          component: CloudController
+        uris:
+        - api.SYSTEM_DOMAIN
+        health_check:
+          name: api-health-check
+          script_path: "/var/vcap/jobs/cloud_controller_ng/bin/cloud_controller_ng_health_check"
+          timeout: 3s
+  resource_pool: large_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: java-buildpack
+    release: cf
+  - name: go-buildpack
+    release: cf
+  - name: binary-buildpack
+    release: cf
+  - name: nodejs-buildpack
+    release: cf
+  - name: ruby-buildpack
+    release: cf
+  - name: php-buildpack
+    release: cf
+  - name: python-buildpack
+    release: cf
+  - name: staticfile-buildpack
+    release: cf
+  - name: dotnet-core-buildpack
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_ng
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_clock
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_worker
+    release: cf
+  - name: metron_agent
+    release: cf
+  - name: statsd_injector
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: api_z2
+  networks:
+  - name: cf2
+  persistent_disk: 0
+  properties:
+    consul:
+      agent:
+        services:
+          cloud_controller_ng: {}
+    metron_agent:
+      zone: z2
+    nfs_server:
+      address: null
+      allow_from_entries:
+      - 10.10.0.0/24
+      - 10.10.0.0/24
+      share: null
+    route_registrar:
+      routes:
+      - name: api
+        port: 9022
+        registration_interval: 20s
+        tags:
+          component: CloudController
+        uris:
+        - api.SYSTEM_DOMAIN
+        health_check:
+          name: api-health-check
+          script_path: "/var/vcap/jobs/cloud_controller_ng/bin/cloud_controller_ng_health_check"
+          timeout: 3s
+  resource_pool: large_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: java-buildpack
+    release: cf
+  - name: go-buildpack
+    release: cf
+  - name: binary-buildpack
+    release: cf
+  - name: nodejs-buildpack
+    release: cf
+  - name: ruby-buildpack
+    release: cf
+  - name: php-buildpack
+    release: cf
+  - name: python-buildpack
+    release: cf
+  - name: staticfile-buildpack
+    release: cf
+  - name: dotnet-core-buildpack
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_ng
+    release: cf
+  - name: metron_agent
+    release: cf
+  - name: statsd_injector
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: clock_z1
+  networks:
+  - name: cf1
+  persistent_disk: 0
+  properties:
+    metron_agent:
+      zone: z1
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_clock
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 0
+  name: api_worker_z1
+  networks:
+  - name: cf1
+  persistent_disk: 0
+  properties:
+    metron_agent:
+      zone: z1
+    nfs_server:
+      address: null
+      allow_from_entries:
+      - 10.10.0.0/24
+      - 10.10.0.0/24
+      share: null
+  resource_pool: small_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_worker
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: clock_z2
+  networks:
+  - name: cf2
+  persistent_disk: 0
+  properties:
+    metron_agent:
+      zone: z2
+  resource_pool: medium_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_clock
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: api_worker_z2
+  networks:
+  - name: cf2
+  persistent_disk: 0
+  properties:
+    metron_agent:
+      zone: z2
+    nfs_server:
+      address: null
+      allow_from_entries:
+      - 10.10.0.0/24
+      - 10.10.0.0/24
+      share: null
+  resource_pool: small_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: cloud_controller_worker
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 0
+  name: loggregator_z1
+  networks:
+  - name: cf1
+  properties:
+    doppler:
+      zone: z1
+    metron_agent:
+      zone: z1
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: doppler
+    release: cf
+  - name: syslog_drain_binder
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: loggregator_z2
+  networks:
+  - name: cf2
+  properties:
+    doppler:
+      zone: z2
+    metron_agent:
+      zone: z2
+  resource_pool: medium_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: doppler
+    release: cf
+  - name: syslog_drain_binder
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: doppler_z1
+  networks:
+  - name: cf1
+  properties:
+    consul:
+      agent:
+        services:
+          doppler:
+            name: doppler
+            tags:
+            - z1
+    doppler:
+      zone: z1
+    metron_agent:
+      zone: z1
+  resource_pool: medium_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: doppler
+    release: cf
+  - name: syslog_drain_binder
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: doppler_z2
+  networks:
+  - name: cf1
+  properties:
+    consul:
+      agent:
+        services:
+          doppler:
+            name: doppler
+            tags:
+            - z2
+    doppler:
+      zone: z2
+    metron_agent:
+      zone: z2
+  resource_pool: medium_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - name: doppler
+    release: cf
+  - name: syslog_drain_binder
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: loggregator_trafficcontroller_z1
+  networks:
+  - name: cf1
+  properties:
+    consul:
+      agent:
+        services:
+          loggregator_trafficcontroller: {}
+    loggregator:
+      uaa:
+        client_secret: DOPPLER_SECRET
+    metron_agent:
+      zone: z1
+    route_registrar:
+      routes:
+      - name: doppler
+        port: 8081
+        registration_interval: 20s
+        uris:
+        - doppler.SYSTEM_DOMAIN
+    traffic_controller:
+      zone: z1
+  resource_pool: small_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      doppler: nil
+    name: loggregator_trafficcontroller
+    release: cf
+  - name: metron_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  update:
+    max_in_flight: 1
+    serial: true
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: loggregator_trafficcontroller_z2
+  networks:
+  - name: cf2
+  properties:
+    consul:
+      agent:
+        services:
+          loggregator_trafficcontroller: {}
+    loggregator:
+      uaa:
+        client_secret: DOPPLER_SECRET
+    metron_agent:
+      zone: z2
+    route_registrar:
+      routes:
+      - name: doppler
+        port: 8081
+        registration_interval: 20s
+        uris:
+        - doppler.SYSTEM_DOMAIN
+    traffic_controller:
+      zone: z2
+  resource_pool: small_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      doppler: nil
+    name: loggregator_trafficcontroller
+    release: cf
+  - name: metron_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: route_registrar
+    release: cf
+  update:
+    max_in_flight: 1
+    serial: true
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: router_z1
+  networks:
+  - name: cf1
+    static_ips:
+    - 10.10.0.130
+  properties:
+    consul:
+      agent:
+        services:
+          gorouter: {}
+    metron_agent:
+      zone: z1
+    router:
+      isolation_segments: []
+      routing_table_sharding_mode: all
+  resource_pool: router_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: gorouter
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf2
+  instances: 0
+  name: router_z2
+  networks:
+  - name: cf2
+    static_ips: []
+  properties:
+    consul:
+      agent:
+        services:
+          gorouter: {}
+    metron_agent:
+      zone: z2
+    router:
+      isolation_segments: []
+      routing_table_sharding_mode: all
+  resource_pool: router_z2
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      nats: nil
+    name: gorouter
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  name: ha_proxy_z1
+  networks:
+  - name: floating
+    static_ips:
+    - 173.1.1.1
+  - default:
+    - dns
+    - gateway
+    name: cf1
+    static_ips:
+    - 10.10.0.125
+  properties:
+    ha_proxy:
+      ssl_pem: |+
+        -----BEGIN RSA PRIVATE KEY-----
+        RSA_PRIVATE_KEY
+        -----END RSA PRIVATE KEY-----
+        -----BEGIN CERTIFICATE-----
+        SSL_CERTIFICATE_SIGNED_BY_PRIVATE_KEY
+        -----END CERTIFICATE-----
+    metron_agent:
+      zone: z1
+    router:
+      servers:
+      - 10.10.0.130
+  resource_pool: router_z1
+  templates:
+  - consumes:
+      consul_client: nil
+      consul_common: nil
+      consul_server: nil
+    name: consul_agent
+    release: cf
+  - consumes:
+      router: nil
+    name: haproxy
+    release: cf
+  - name: metron_agent
+    release: cf
+  update: {}
+- default_networks:
+  - name: cf1
+  instances: 1
+  lifecycle: errand
+  name: acceptance_tests
+  networks:
+  - name: cf1
+  resource_pool: small_errand
+  templates:
+  - name: acceptance-tests
+    release: cf
+- default_networks:
+  - name: cf1
+  instances: 0
+  lifecycle: errand
+  name: smoke_tests
+  networks:
+  - name: cf1
+  properties: {}
+  resource_pool: small_errand
+  templates:
+  - name: smoke-tests
+    release: cf
+name: ENVIRONMENT
+networks:
+- cloud_properties:
+    net_id: NET_ID
+    security_groups: []
+  name: floating
+  type: vip
+- name: cf1
+  subnets:
+  - cloud_properties:
+      net_id: NET_ID
+      security_groups:
+      - cf
+    dns:
+    - 8.8.8.8
+    gateway: 10.10.0.1
+    range: 10.10.0.0/24
+    reserved:
+    - 10.10.0.2 - 10.10.0.100
+    - 10.10.0.200 - 10.10.0.254
+    static:
+    - 10.10.0.125 - 10.10.0.175
+  type: manual
+- name: cf2
+  subnets:
+  - cloud_properties:
+      net_id: NET_ID
+      security_groups:
+      - cf
+    dns:
+    - 8.8.8.8
+    gateway: 10.10.0.1
+    range: 10.10.0.0/24
+    reserved:
+    - 10.10.0.2 - 10.10.0.100
+    - 10.10.0.200 - 10.10.0.254
+    static:
+    - 10.10.0.125 - 10.10.0.175
+  type: manual
+properties:
+  acceptance_tests: null
+  app_domains:
+  - APP_DOMAIN
+  app_ssh: null
+  blobstore:
+    admin_users:
+    - password: blobstore-password
+      username: blobstore-username
+    port: 8080
+    secure_link:
+      secret: blobstore-secret
+    tls:
+      ca_cert: BLOBSTORE_CA_CERT
+      cert: BLOBSTORE_TLS_CERT
+      port: 4443
+      private_key: BLOBSTORE_PRIVATE_KEY
+  cc:
+    allow_app_ssh_access: true
+    allowed_cors_domains: []
+    app_events:
+      cutoff_age_in_days: 31
+    app_usage_events:
+      cutoff_age_in_days: 31
+    audit_events:
+      cutoff_age_in_days: 31
+    broker_client_default_async_poll_interval_seconds: null
+    broker_client_max_async_poll_duration_minutes: null
+    broker_client_timeout_seconds: 70
+    buildpacks:
+      blobstore_type: webdav
+      buildpack_directory_key: SYSTEM_DOMAIN-cc-buildpacks
+      cdn: null
+      fog_aws_storage_options: null
+      fog_connection: null
+      webdav_config:
+        blobstore_timeout: 5
+        ca_cert: BLOBSTORE_CA_CERT
+        password: blobstore-password
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: http://blobstore.SYSTEM_DOMAIN
+        username: blobstore-username
+    bulk_api_password: BULK_API_PASSWORD
+    client_max_body_size: 15M
+    db_encryption_key: DB_ENCRYPTION_KEY
+    db_logging_level: debug2
+    default_app_disk_in_mb: 1024
+    default_app_memory: 1024
+    default_app_ssh_access: null
+    default_buildpacks:
+    - name: staticfile_buildpack
+      package: staticfile-buildpack
+    - name: java_buildpack
+      package: java-buildpack
+    - name: ruby_buildpack
+      package: ruby-buildpack
+    - name: nodejs_buildpack
+      package: nodejs-buildpack
+    - name: go_buildpack
+      package: go-buildpack
+    - name: python_buildpack
+      package: python-buildpack
+    - name: php_buildpack
+      package: php-buildpack
+    - name: binary_buildpack
+      package: binary-buildpack
+    - name: dotnet_core_buildpack
+      package: dotnet-core-buildpack
+    default_health_check_timeout: 60
+    default_quota_definition: default
+    default_running_security_groups:
+    - public_networks
+    - dns
+    default_staging_security_groups:
+    - public_networks
+    - dns
+    default_to_diego_backend: true
+    development_mode: false
+    diego:
+      bbs:
+        url: null
+      insecure_docker_registry_list: null
+      pid_limit: null
+      temporary_cc_uploader_mtls: null
+      temporary_droplet_download_mtls: null
+      temporary_local_apps: null
+      temporary_local_staging: null
+      temporary_local_sync: null
+      temporary_local_tasks: null
+      temporary_local_tps: null
+      use_privileged_containers_for_running: null
+      use_privileged_containers_for_staging: null
+    directories: null
+    disable_custom_buildpacks: false
+    droplets:
+      blobstore_type: webdav
+      cdn: null
+      droplet_directory_key: SYSTEM_DOMAIN-cc-droplets
+      fog_aws_storage_options: null
+      fog_connection: null
+      max_staged_droplets_stored: null
+      webdav_config:
+        blobstore_timeout: 5
+        ca_cert: BLOBSTORE_CA_CERT
+        password: blobstore-password
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: http://blobstore.SYSTEM_DOMAIN
+        username: blobstore-username
+    external_host: api
+    external_port: 9022
+    external_protocol: null
+    install_buildpacks:
+    - name: staticfile_buildpack
+      package: staticfile-buildpack
+    - name: java_buildpack
+      package: java-buildpack
+    - name: ruby_buildpack
+      package: ruby-buildpack
+    - name: nodejs_buildpack
+      package: nodejs-buildpack
+    - name: go_buildpack
+      package: go-buildpack
+    - name: python_buildpack
+      package: python-buildpack
+    - name: php_buildpack
+      package: php-buildpack
+    - name: binary_buildpack
+      package: binary-buildpack
+    - name: dotnet_core_buildpack
+      package: dotnet-core-buildpack
+    internal_api_password: BULK_API_PASSWORD
+    internal_api_user: internal_user
+    internal_service_hostname: cloud-controller-ng.service.cf.internal
+    jobs:
+      app_bits_packer:
+        timeout_in_seconds: null
+      app_events_cleanup:
+        timeout_in_seconds: null
+      app_usage_events_cleanup:
+        timeout_in_seconds: null
+      blobstore_delete:
+        timeout_in_seconds: null
+      blobstore_upload:
+        timeout_in_seconds: null
+      droplet_deletion:
+        timeout_in_seconds: null
+      droplet_upload:
+        timeout_in_seconds: null
+      generic:
+        number_of_workers: null
+      global:
+        timeout_in_seconds: 14400
+    logging_level: debug2
+    maximum_app_disk_in_mb: 2048
+    maximum_health_check_timeout: 180
+    min_cli_version: null
+    min_recommended_cli_version: null
+    minimum_candidate_stagers: null
+    mutual_tls:
+      ca_cert: CC_MUTUAL_TLS_CA_CERT
+      private_key: CC_MUTUAL_TLS_PRIVATE_KEY
+      public_cert: CC_MUTUAL_TLS_PUBLIC_CERT
+    newrelic:
+      capture_params: false
+      developer_mode: false
+      environment_name: ENVIRONMENT
+      license_key: null
+      monitor_mode: false
+      transaction_tracer:
+        enabled: true
+        record_sql: obfuscated
+    packages:
+      app_package_directory_key: SYSTEM_DOMAIN-cc-packages
+      blobstore_type: webdav
+      cdn: null
+      fog_aws_storage_options: null
+      fog_connection: null
+      max_package_size: 1073741824
+      max_valid_packages_stored: null
+      webdav_config:
+        blobstore_timeout: 5
+        ca_cert: BLOBSTORE_CA_CERT
+        password: blobstore-password
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: http://blobstore.SYSTEM_DOMAIN
+        username: blobstore-username
+    quota_definitions:
+      default:
+        memory_limit: 10240
+        non_basic_services_allowed: true
+        total_routes: 1000
+        total_service_keys: 1000
+        total_services: 100
+    rate_limiter: null
+    reserved_private_domains: null
+    resource_pool:
+      blobstore_type: webdav
+      cdn: null
+      fog_aws_storage_options: null
+      fog_connection: null
+      resource_directory_key: SYSTEM_DOMAIN-cc-resources
+      webdav_config:
+        blobstore_timeout: 5
+        ca_cert: BLOBSTORE_CA_CERT
+        password: blobstore-password
+        private_endpoint: https://blobstore.service.cf.internal:4443
+        public_endpoint: http://blobstore.SYSTEM_DOMAIN
+        username: blobstore-username
+    security_event_logging:
+      enabled: null
+    security_group_definitions:
+    - name: public_networks
+      rules:
+      - destination: 0.0.0.0-9.255.255.255
+        protocol: all
+      - destination: 11.0.0.0-169.253.255.255
+        protocol: all
+      - destination: 169.255.0.0-172.15.255.255
+        protocol: all
+      - destination: 172.32.0.0-192.167.255.255
+        protocol: all
+      - destination: 192.169.0.0-255.255.255.255
+        protocol: all
+    - name: dns
+      rules:
+      - destination: 0.0.0.0/0
+        ports: "53"
+        protocol: tcp
+      - destination: 0.0.0.0/0
+        ports: "53"
+        protocol: udp
+    service_usage_events:
+      cutoff_age_in_days: 31
+    srv_api_uri: https://api.SYSTEM_DOMAIN
+    stacks: null
+    staging_upload_password: STAGING_UPLOAD_PASSWORD
+    staging_upload_user: STAGING_UPLOAD_USER
+    system_buildpacks:
+    - name: staticfile_buildpack
+      package: staticfile-buildpack
+    - name: java_buildpack
+      package: java-buildpack
+    - name: ruby_buildpack
+      package: ruby-buildpack
+    - name: nodejs_buildpack
+      package: nodejs-buildpack
+    - name: go_buildpack
+      package: go-buildpack
+    - name: python_buildpack
+      package: python-buildpack
+    - name: php_buildpack
+      package: php-buildpack
+    - name: binary_buildpack
+      package: binary-buildpack
+    - name: dotnet_core_buildpack
+      package: dotnet-core-buildpack
+    system_hostnames: null
+    thresholds:
+      api:
+        alert_if_above_mb: null
+        restart_if_above_mb: null
+        restart_if_consistently_above_mb: null
+      worker:
+        alert_if_above_mb: null
+        restart_if_above_mb: null
+        restart_if_consistently_above_mb: null
+    tls_port: CC_MUTUAL_TLS_PORT
+    user_buildpacks: []
+    users_can_select_backend: true
+    volume_services_enabled: null
+    webdav_config:
+      blobstore_timeout: 5
+      ca_cert: BLOBSTORE_CA_CERT
+      password: blobstore-password
+      private_endpoint: https://blobstore.service.cf.internal:4443
+      public_endpoint: http://blobstore.SYSTEM_DOMAIN
+      username: blobstore-username
+  ccdb:
+    address: 10.10.0.129
+    databases:
+    - name: ccdb
+      tag: cc
+    db_scheme: postgres
+    port: 5524
+    roles:
+    - name: ccadmin
+      password: CCDB_PASSWORD
+      tag: admin
+  collector: null
+  consul:
+    agent:
+      domain: cf.internal
+      log_level: null
+      servers:
+        lan:
+        - 10.10.0.137
+    agent_cert: CONSUL_AGENT_CERT
+    agent_key: CONSUL_AGENT_KEY
+    ca_cert: CONSUL_CA_CERT
+    dns_config: null
+    encrypt_keys:
+    - CONSUL_ENCRYPT_KEY
+    server_cert: CONSUL_SERVER_CERT
+    server_key: CONSUL_SERVER_KEY
+  databases:
+    additional_config: null
+    address: 10.10.0.129
+    collect_statement_statistics: null
+    databases:
+    - citext: true
+      name: ccdb
+      tag: cc
+    - citext: true
+      name: uaadb
+      tag: uaa
+    - citext: false
+      name: diego
+      tag: diego
+    - citext: false
+      name: locket
+      tag: diego
+    db_scheme: postgres
+    port: 5524
+    roles:
+    - name: ccadmin
+      password: CCDB_PASSWORD
+      tag: admin
+    - name: uaaadmin
+      password: UAADB_PASSWORD
+      tag: admin
+    - name: diego
+      password: DIEGODB_PASSWORD
+      tag: admin
+  description: null
+  disk_quota_enabled: true
+  doppler:
+    blacklisted_syslog_ranges: null
+    debug: false
+    etcd:
+      client_cert: ETCD_CLIENT_CERT
+      client_key: ETCD_CLIENT_KEY
+    maxRetainedLogMessages: 100
+    message_drain_buffer_size: null
+    outgoing_port: 8081
+    port: 4443
+    tls:
+      enable: null
+      port: null
+      server_cert: null
+      server_key: null
+    unmarshaller_count: 5
+    zone: null
+  doppler_endpoint:
+    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
+  dropsonde:
+    enabled: true
+  etcd:
+    advertise_urls_dns_suffix: cf-etcd.service.cf.internal
+    ca_cert: ETCD_CA_CERT
+    client_cert: ETCD_CLIENT_CERT
+    client_key: ETCD_CLIENT_KEY
+    cluster:
+    - instances: 1
+      name: etcd_z1
+    - instances: 0
+      name: etcd_z2
+    machines:
+    - 10.10.0.133
+    peer_ca_cert: ETCD_PEER_CA_CERT
+    peer_cert: ETCD_PEER_CERT
+    peer_key: ETC_PEER_KEY
+    peer_require_ssl: true
+    require_ssl: true
+    server_cert: ETCD_SERVER_CERT
+    server_key: ETCD_SERVER_KEY
+  etcd_metrics_server:
+    etcd:
+      ca_cert: ETCD_CA_CERT
+      client_cert: ETCD_CLIENT_CERT
+      client_key: ETCD_CLIENT_KEY
+      dns_suffix: cf-etcd.service.cf.internal
+      require_ssl: true
+  ha_proxy: null
+  logger_endpoint:
+    port: 4443
+  loggregator:
+    blacklisted_syslog_ranges: null
+    debug: false
+    etcd:
+      ca_cert: ETCD_CA_CERT
+      machines:
+      - cf-etcd.service.cf.internal
+      require_ssl: true
+    maxRetainedLogMessages: 100
+    outgoing_dropsonde_port: 8081
+    tls:
+      ca_cert: LOGGREGATOR_CA_CERT
+      cc_trafficcontroller:
+        cert: LOGGREGATOR_TRAFFICCONTROLLER_CERT
+        key: LOGGREGATOR_TRAFFICCONTROLLER_KEY
+      doppler:
+        cert: LOGGREGATOR_DOPPLER_CERT
+        key: LOGGREGATOR_DOPPLER_KEY
+      metron:
+        cert: LOGGREGATOR_METRON_CERT
+        key: LOGGREGATOR_METRON_KEY
+      statsd_injector:
+        cert: LOGGREGATOR_STATSDINJECTOR_CERT
+        key: LOGGREGATOR_STATSDINJECTOR_KEY
+      syslogdrainbinder:
+        cert: LOGGREGATOR_SYSLOGDRAINBINDER_CERT
+        key: LOGGREGATOR_SYSLOGDRAINBINDER_KEY
+      trafficcontroller:
+        cert: LOGGREGATOR_TRAFFICCONTROLLER_CERT
+        key: LOGGREGATOR_TRAFFICCONTROLLER_KEY
+  loggregator_endpoint:
+    shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
+  login:
+    analytics:
+      code: null
+      domain: null
+    asset_base_url: null
+    brand: oss
+    branding: null
+    catalina_opts: null
+    enabled: true
+    links:
+      passwd: https://login.SYSTEM_DOMAIN/forgot_password
+      signup: https://login.SYSTEM_DOMAIN/create_account
+    logout: null
+    messages: null
+    notifications:
+      url: null
+    protocol: http
+    restricted_ips_regex: null
+    saml:
+      serviceProviderCertificate: SERVICE_PROVIDER_CERTIFICATE
+      serviceProviderKey: SERVICE_PROVIDER_PRIVATE_KEY
+    self_service_links_enabled: null
+    smtp:
+      host: null
+      password: null
+      port: null
+      user: null
+    url: null
+  metron_agent:
+    deployment: ENVIRONMENT
+    etcd:
+      client_cert: ETCD_CLIENT_CERT
+      client_key: ETCD_CLIENT_KEY
+    preferred_protocol: null
+    protocols: null
+    tls:
+      client_cert: null
+      client_key: null
+  nats:
+    debug: false
+    machines:
+    - 10.10.0.127
+    monitor_port: 0
+    password: NATS_PASSWORD
+    port: 4222
+    prof_port: 0
+    trace: false
+    user: NATS_USER
+  nfs_server:
+    address: null
+    allow_from_entries:
+    - 10.10.0.0/24
+    - 10.10.0.0/24
+    share: null
+  request_timeout_in_seconds: 900
+  router:
+    balancing_algorithm: null
+    cipher_suites: null
+    debug_address: null
+    drain_wait: null
+    enable_access_log_streaming: null
+    enable_proxy: null
+    enable_ssl: null
+    extra_headers_to_log: null
+    force_forwarded_proto_https: null
+    healthcheck_user_agent: null
+    load_balancer_healthy_threshold: null
+    logging_level: null
+    logrotate: null
+    max_idle_connections: null
+    port: null
+    requested_route_registration_interval_in_seconds: null
+    route_services_recommend_https: null
+    route_services_secret: null
+    route_services_secret_decrypt_only: null
+    route_services_timeout: null
+    secure_cookies: null
+    ssl_cert: null
+    ssl_key: null
+    ssl_skip_validation: null
+    status:
+      password: ROUTER_PASSWORD
+      port: null
+      user: ROUTER_USER
+    suspend_pruning_if_nats_unavailable: null
+    tls_pem: null
+    tracing:
+      enable_zipkin: null
+  routing_api:
+    enabled: null
+    port: null
+    uri: null
+  smoke_tests: null
+  ssl:
+    skip_cert_verify: true
+  statsd_injector:
+    deployment: ENVIRONMENT
+  support_address: http://support.cloudfoundry.com
+  syslog_daemon_config: null
+  syslog_drain_binder:
+    etcd:
+      client_cert: ETCD_CLIENT_CERT
+      client_key: ETCD_CLIENT_KEY
+  system_domain: SYSTEM_DOMAIN
+  system_domain_organization: SYSTEM_DOMAIN_ORGANIZATION
+  traffic_controller:
+    disable_access_control: null
+    etcd:
+      client_cert: ETCD_CLIENT_CERT
+      client_key: ETCD_CLIENT_KEY
+    security_event_logging:
+      enabled: false
+    zone: null
+  uaa:
+    admin:
+      client_secret: ADMIN_SECRET
+    authentication:
+      policy:
+        countFailuresWithinSeconds: null
+        lockoutAfterFailures: null
+        lockoutPeriodSeconds: null
+    ca_cert: UAA_CA_CERT
+    catalina_opts: null
+    cc:
+      client_secret: CC_CLIENT_SECRET
+    clients:
+      cc-service-dashboards:
+        authorities: clients.read,clients.write,clients.admin
+        authorized-grant-types: client_credentials
+        secret: CC_SERVICE_DASHBOARDS_SECRET
+      cc_routing:
+        authorities: routing.router_groups.read
+        authorized-grant-types: client_credentials
+        secret: CC_ROUTING_SECRET
+      cf:
+        access-token-validity: 600
+        authorities: uaa.none
+        authorized-grant-types: password,refresh_token
+        override: true
+        refresh-token-validity: 604800
+        scope: cloud_controller.read,cloud_controller.write,openid,password.write,cloud_controller.admin,cloud_controller.admin_read_only,cloud_controller.global_auditor,scim.read,scim.write,doppler.firehose,uaa.user,routing.router_groups.read,routing.router_groups.write
+        secret: ""
+      cloud_controller_username_lookup:
+        authorities: scim.userids
+        authorized-grant-types: client_credentials
+        secret: CLOUD_CONTROLLER_USERNAME_LOOKUP_SECRET
+      doppler:
+        authorities: uaa.resource
+        authorized-grant-types: client_credentials
+        override: true
+        secret: DOPPLER_SECRET
+      gorouter:
+        authorities: routing.routes.read
+        authorized-grant-types: client_credentials
+        secret: GOROUTER_SECRET
+      login:
+        authorities: oauth.login,scim.write,clients.read,notifications.write,critical_notifications.write,emails.write,scim.userids,password.write
+        authorized-grant-types: authorization_code,client_credentials,refresh_token
+        autoapprove: true
+        override: true
+        redirect-uri: https://login.SYSTEM_DOMAIN
+        scope: openid,oauth.approvals
+        secret: LOGIN_CLIENT_SECRET
+      notifications:
+        authorities: cloud_controller.admin,scim.read
+        authorized-grant-types: client_credentials
+        secret: NOTIFICATIONS_CLIENT_SECRET
+      tcp_emitter:
+        authorities: routing.routes.write,routing.routes.read
+        authorized-grant-types: client_credentials
+        secret: TCP-EMITTER-SECRET
+      tcp_router:
+        authorities: routing.routes.read
+        authorized-grant-types: client_credentials
+        secret: TCP-ROUTER-SECRET
+    database: null
+    issuer: https://uaa.SYSTEM_DOMAIN
+    jwt:
+      signing_key: JWT_SIGNING_KEY
+      verification_key: JWT_VERIFICATION_KEY
+    ldap: null
+    login: null
+    newrelic: null
+    no_ssl: null
+    password:
+      policy:
+        minLength: null
+        requireDigit: null
+        requireLowerCaseCharacter: null
+        requireSpecialCharacter: null
+        requireUpperCaseCharacter: null
+    port: 8080
+    require_https: null
+    scim:
+      external_groups: null
+      groups: null
+      userids_enabled: true
+      users:
+      - groups:
+        - scim.write
+        - scim.read
+        - openid
+        - cloud_controller.admin
+        - doppler.firehose
+        name: admin
+        password: ADMIN_PASSWORD
+    ssl:
+      port: 8443
+    sslCertificate: UAA_SERVER_CERT
+    sslPrivateKey: UAA_SERVER_KEY
+    token_endpoint: null
+    url: https://uaa.SYSTEM_DOMAIN
+    internal_url: https://uaa.service.cf.internal:8443
+    user:
+      authorities:
+      - openid
+      - scim.me
+      - cloud_controller.read
+      - cloud_controller.write
+      - cloud_controller_service_permissions.read
+      - password.write
+      - uaa.user
+      - approvals.me
+      - oauth.approvals
+      - notification_preferences.read
+      - notification_preferences.write
+      - profile
+      - roles
+      - user_attributes
+      - cloud_controller.user
+      - actuator.read
+    zones:
+      internal:
+        hostnames:
+        - uaa.service.cf.internal
+  uaadb:
+    address: 10.10.0.129
+    databases:
+    - name: uaadb
+      tag: uaa
+    db_scheme: postgresql
+    port: 5524
+    roles:
+    - name: uaaadmin
+      password: UAADB_PASSWORD
+      tag: admin
+releases:
+- name: cf
+  version: latest
+resource_pools:
+- cloud_properties:
+    instance_type: m1.small
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: small_z1
+  network: cf1
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.small
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: small_z2
+  network: cf2
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.medium
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: medium_z1
+  network: cf1
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.medium
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: medium_z2
+  network: cf2
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.large
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: large_z1
+  network: cf1
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.large
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: large_z2
+  network: cf2
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.medium
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: router_z1
+  network: cf1
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.medium
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: router_z2
+  network: cf2
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.small
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: small_errand
+  network: cf1
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+- cloud_properties:
+    instance_type: m1.large
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+  name: xlarge_errand
+  network: cf1
+  stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
+    version: latest
+update:
+  canaries: 1
+  canary_watch_time: 30000-600000
+  max_in_flight: 1
+  serial: true
+  update_watch_time: 5000-600000
+

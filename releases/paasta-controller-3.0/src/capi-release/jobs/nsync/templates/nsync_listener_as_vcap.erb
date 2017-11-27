@@ -1,0 +1,8 @@
+#!/bin/bash -e
+
+LOG_DIR=/var/vcap/sys/log/nsync
+CONF_DIR=/var/vcap/jobs/nsync/config
+
+exec /var/vcap/packages/nsync/bin/nsync-listener -configPath "${CONF_DIR}/nsync_listener_config.json" \
+  2> >(tee -a $LOG_DIR/nsync_listener.stderr.log | logger -p user.error -t vcap.nsync-listener) \
+  1> >(tee -a $LOG_DIR/nsync_listener.stdout.log | logger -p user.info -t vcap.nsync-listener)
