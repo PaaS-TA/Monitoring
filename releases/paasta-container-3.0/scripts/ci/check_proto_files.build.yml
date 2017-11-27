@@ -1,0 +1,10 @@
+---
+platform: linux
+
+rootfs_uri: docker:///cloudfoundry/diego-pipeline
+
+inputs:
+  - name: diego-release
+
+run:
+  path: diego-release/scripts/check-proto-files

@@ -1,0 +1,7 @@
+---
+sql_lock_overrides:
+  templates:
+  - name: locket
+    release: diego
+  locket:
+    api_location: "locket.service.cf.internal:8891"

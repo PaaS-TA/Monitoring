@@ -1,0 +1,10 @@
+---
+platform: linux
+
+rootfs_uri: docker:///cloudfoundry/diego-units-ci#latest
+
+inputs:
+  - name: diego-release
+
+run:
+  path: diego-release/scripts/check-for-windows-drift

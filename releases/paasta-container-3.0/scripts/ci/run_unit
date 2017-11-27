@@ -1,0 +1,23 @@
+#!/bin/bash
+# vim: set ft=sh
+
+set -e
+
+chown -R diego diego-release/
+
+cat << EOF > /etc/my.cnf
+[mysqld]
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+EOF
+
+if [ "${SQL_FLAVOR}" = "mysql" ]; then
+  service mysql start
+elif [ "${SQL_FLAVOR}" = "postgres" ]; then
+  service postgresql start
+else
+  service mysql start
+  service postgresql start
+fi
+
+
+su diego -p -c ./diego-release/scripts/ci/run_unit_internal

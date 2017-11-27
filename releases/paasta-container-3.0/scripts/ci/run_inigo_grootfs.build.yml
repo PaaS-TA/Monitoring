@@ -1,0 +1,22 @@
+
+platform: linux
+
+rootfs_uri: docker:///cloudfoundry/inigo-ci
+
+inputs:
+- name: diego-release
+- name: garden-runc-release
+- name: grootfs-release
+- name: routing-release
+
+params:
+  GINKGO_PARALLEL: "true" # we check for the literal string "true" in the run_inigo script
+  DEFAULT_EVENTUALLY_TIMEOUT:
+  INIGO_REPEAT_COUNT: 1
+  SKIP_PACKAGES:
+  SKIP_REGEX:
+  SQL_FLAVOR:
+  USE_GROOTFS: true
+
+run:
+  path: diego-release/scripts/ci/run_inigo

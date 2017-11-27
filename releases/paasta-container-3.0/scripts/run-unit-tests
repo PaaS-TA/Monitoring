@@ -1,0 +1,23 @@
+#!/bin/bash
+
+scripts_path=./$(dirname $0)
+eval $($scripts_path/get_paths.sh)
+
+ERROR_CODE=0
+
+SQL_FLAVOR=mysql $scripts_path/run-unit-tests-with-backing-store
+ERROR_CODE=$?
+
+SQL_FLAVOR=postgres $scripts_path/run-unit-tests-with-backing-store
+let ERROR_CODE+=$?
+
+$scripts_path/run-unit-tests-no-backing-store
+let ERROR_CODE+=$?
+
+if [ ${ERROR_CODE} -eq 0 ]; then
+  echo "Diego Unit Tests Passed."
+else
+  echo "Diego Unit Tests Failed!"
+fi
+
+exit ${ERROR_CODE}
