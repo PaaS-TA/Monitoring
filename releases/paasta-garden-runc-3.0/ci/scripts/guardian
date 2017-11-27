@@ -1,0 +1,51 @@
+#!/bin/bash
+# vim: set ft=sh
+set -ex
+
+base=$PWD
+
+cd "$(dirname "$0")/../.."
+
+export GOROOT=/usr/local/go
+export PATH=$GOROOT/bin:$PATH
+
+export GOPATH=$PWD
+export PATH=$GOPATH/bin:$PATH
+
+pushd src/github.com/opencontainers/runc
+  go build -tags "seccomp apparmor" --ldflags '-extldflags "-static"' -o runc .
+  mv runc /usr/local/bin/runc
+popd
+
+mkdir -p /var/run/oci
+mount -t tmpfs tmpfs /var/run/oci
+
+# Set up AppArmor
+mount -t securityfs securityfs /sys/kernel/security
+if ! aa-status | grep garden-default > /dev/null; then
+  apparmor_parser -a ci/assets/garden-default
+fi
+
+cd src/code.cloudfoundry.org/guardian
+
+export GARDEN_TEST_ROOTFS=/opt/warden/rootfs
+export GARDEN_PREEXISTING_USERS_TEST_ROOTFS=/opt/warden/preexisting-users-rootfs
+export GARDEN_FUSE_TEST_ROOTFS=/opt/warden/fuse-rootfs
+export GARDEN_NESTABLE_TEST_ROOTFS=/opt/warden/nestable-rootfs
+export GARDEN_TAR_PATH=/opt/tar
+export GARDEN_TEST_GRAPHPATH=/tmp/aufs_mount
+export GARDEN_DORA_PATH=$PWD/../garden-integration-tests/resources/dora.tgz
+[ -d /opt/warden/docker-registry-v2-rootfs ] && export GARDEN_DOCKER_REGISTRY_V2_TEST_ROOTFS=/opt/warden/docker-registry-v2-rootfs
+
+chmod +s "$(which newuidmap)" "$(which newgidmap)"
+
+go version
+go vet ./...
+echo "compiling test process: $(date)"
+
+cmd="ginkgo -tags daemon -r -p -race -keepGoing -nodes=8 -failOnPending $*"
+if [ -n "${SLOW_MOBIUS_TIME_LIMIT_SECONDS:-}" ]; then
+  cmd="$base/gr-release-develop/ci/scripts/slowmobius $cmd"
+fi
+
+$cmd

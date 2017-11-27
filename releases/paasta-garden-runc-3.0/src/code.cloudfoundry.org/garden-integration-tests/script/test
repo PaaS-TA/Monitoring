@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+
+ARGS=$@
+
+(cd ../../..; ./scripts/remote-fly ci/gats.yml -- $ARGS)

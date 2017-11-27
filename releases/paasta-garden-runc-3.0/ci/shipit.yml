@@ -1,0 +1,24 @@
+---
+image_resource:
+  type: docker-image
+  source:
+    repository: cfgarden/garden-ci
+    tag: '1.0'
+
+platform: linux
+
+inputs:
+  - name: gr-release-develop
+  - name: gr-version
+  - name: garden-ci
+  - name: gr-candidate-tarball
+  - name: grootfs-release-tarball
+  - name: gdn-linux-release
+
+outputs:
+  - name: final-release
+  - name: github-release
+  - name: release
+
+run:
+  path: gr-release-develop/ci/scripts/shipit

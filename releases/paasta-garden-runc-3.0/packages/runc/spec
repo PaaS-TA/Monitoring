@@ -1,0 +1,10 @@
+---
+name: runc
+
+dependencies:
+  - libseccomp
+  - golang
+  - apparmor
+
+files:
+  - github.com/opencontainers/runc/**/*

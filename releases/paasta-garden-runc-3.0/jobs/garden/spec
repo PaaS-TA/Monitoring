@@ -1,0 +1,160 @@
+---
+name: garden
+
+templates:
+  garden_ctl.erb: bin/garden_ctl
+  garden-default.erb: config/garden-default
+  auplink: bin/auplink
+  brutefs: bin/brutefs
+
+packages:
+  - guardian
+  - iptables
+  - runc
+  - busybox
+  - tar
+  - garden-idmapper
+
+properties:
+  garden.listen_network:
+    description: "Garden server connection mode (tcp or unix)."
+    default: unix
+
+  garden.listen_address:
+    description: "Garden server listening address."
+    default: /var/vcap/data/garden/garden.sock
+
+  garden.network_mtu:
+    description: "Maximum network transmission unit length in bytes. Defaults to the mtu of the interface that the host uses for outbound connections. Max allowed value is 1500."
+    default: 0
+
+  garden.deny_networks:
+    description: "List of CIDR blocks to which containers will be denied access."
+    default: []
+
+  garden.allow_networks:
+    description: "List of CIDR blocks to which containers will be allowed access (applied after deny)."
+    default: []
+
+  garden.allow_host_access:
+    description: "A boolean stating whether or not containers started on this host should be able to reach this host."
+    default: false
+
+  garden.docker_registry_endpoint:
+    description: "An URL pointing to the Docker registry to use to fetch Docker images. If unset, this will default to the Docker default."
+
+  garden.log_level:
+    description: "log level for the Garden server - can be debug, info, error or fatal"
+    default: info
+
+  garden.debug_listen_address:
+    description: "tcp address on which to serve debug info"
+
+  garden.default_container_grace_time:
+    description: "duration after which to reap idle containers"
+    default: 0
+
+  garden.default_container_blockio_weight:
+    description: "default blkio.weight value for containers. Valid values are 0 (use system default), or 10 - 1000."
+    default: 0
+
+  garden.default_container_rootfs:
+    description: "path to the rootfs to use when a container specifies no rootfs"
+    default: /var/vcap/packages/busybox
+
+  garden.graph_cleanup_threshold_in_mb:
+    description: "Total size of all filesystem layers downloaded from Docker registries before graph cleanup is activated. -1 disables graph cleanup."
+    default: -1
+
+  garden.persistent_image_list:
+    description: "List of Rootfs Paths (directories or docker URLs) which will never be deleted during graph cleanup"
+    default: []
+
+  garden.port_pool.start:
+    description: "An integer port number used to denote where ports should start being allocated for Net In calls. Uses the Garden default if not set."
+
+  garden.port_pool.size:
+    description: "An integer used to denote how many ports are avaliable for Net In calls. Uses the Garden default if not set."
+
+  garden.dropsonde.origin:
+    description: "A string identifier that will be used when reporting metrics to Dropsonde."
+
+  garden.dropsonde.destination:
+    description: "A URL that points at the Metron agent to which metrics are forwarded. By default, it matches with the default of Metron."
+
+  garden.dns_servers:
+    description: "Override DNS servers to be used in containers; defaults to the same as the host"
+    default: []
+
+  garden.additional_dns_servers:
+    description: "Additional DNS servers to be used in containers; extends those used on the host or those set by dns_servers property"
+    default: []
+
+  garden.insecure_docker_registry_list:
+    description: "A list of IP:PORT tuples that we allow pulling docker images from using self-signed certificates."
+    default: []
+
+  garden.runtime_plugin:
+    description: "Path to a runtime plugin binary"
+
+  garden.image_plugin:
+    description: "Path to an optional image plugin binary"
+
+  garden.image_plugin_extra_args:
+    description: "An array of additional arguments which will be passed to the image plugin binary"
+    default: []
+
+  garden.privileged_image_plugin:
+    description: "Path to an optional privileged image plugin binary"
+
+  garden.privileged_image_plugin_extra_args:
+    description: "An array of additional arguments which will be passed to the privileged image plugin binary when creating privileged containers - these will be passed instead of the contents of image_plugin_extra_args"
+    default: []
+
+  garden.network_plugin:
+    description: "Path to an optional network plugin binary"
+
+  garden.network_plugin_extra_args:
+    description: "An array of additional arguments which will be passed to the network plugin binary"
+    default: []
+
+  garden.max_containers:
+    description: "Maximum container capacity to advertise. It is not recommended to set this larger than 250."
+    default: 250
+
+  garden.cpu_quota_per_share_in_us:
+    description: "Maximum number of microseconds each cpu share assigned to a container allows per quota period. When set to zero cpu limit is disabled."
+    default: 0
+
+  garden.experimental_tcp_mem_limit_in_bytes:
+    description: "Hard limit for the tcp buffer memory in bytes. When set to zero tcp memory limit is disabled."
+    default: 0
+
+  garden.destroy_containers_on_start:
+    description: "If true, all existing containers will be destroyed any time the garden server starts up"
+    default: false
+
+  garden.network_pool:
+    description: "A CIDR subnet mask specifying the range of subnets available to be assigned to containers."
+    default: "10.254.0.0/22"
+
+  garden.http_proxy:
+    description: Http proxy that Garden process should use
+
+  garden.https_proxy:
+    description: Https proxy that Garden process should use
+
+  garden.no_proxy:
+    description: List of comma-separated hosts that should skip connecting to the proxy
+
+  garden.apparmor_profile:
+    decription: Apparmor profile to use for unprivileged container procesess
+    default: garden-default
+
+  garden.experimental_rootless_mode:
+    description: A boolean stating whether or not to run garden-server as non-root user
+    default: false
+
+  garden.cleanup_process_dirs_on_wait:
+    description: A boolean stating whether or not to cleanup process state after waiting for it. If set a process can be waited for only once.
+    default: false

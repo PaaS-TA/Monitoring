@@ -1,0 +1,316 @@
+#!/bin/bash -e
+
+RUN_DIR=/var/vcap/sys/run/garden
+LOG_DIR=/var/vcap/sys/log/garden
+PIDFILE=$RUN_DIR/garden.pid
+DATA_DIR=/var/vcap/data
+GARDEN_DIR=/var/vcap/data/garden
+GARDEN_CONFIG_DIR=/var/vcap/jobs/garden/config
+
+mkdir -p /var/vcap/sys/log/monit
+exec 1>> /var/vcap/sys/log/monit/garden.out.log
+exec 2>> /var/vcap/sys/log/monit/garden.err.log
+
+<% if_p('garden.http_proxy') do |http_proxy| %>
+export HTTP_PROXY='<%= http_proxy %>'
+export http_proxy='<%= http_proxy %>'
+<% end %>
+<% if_p('garden.https_proxy') do |https_proxy| %>
+export HTTPS_PROXY='<%= https_proxy %>'
+export https_proxy='<%= https_proxy %>'
+<% end %>
+<% if_p('garden.no_proxy') do |no_proxy| %>
+export NO_PROXY='<%= no_proxy %>'
+export no_proxy='<%= no_proxy %>'
+<% end %>
+
+# copied from https://github.com/concourse/concourse/blob/master/jobs/baggageclaim/templates/baggageclaim_ctl.erb#L54
+# break out of bosh-lite device limitations
+function permit_device_control() {
+  local devices_mount_info=$(cat /proc/self/cgroup | grep devices)
+
+  if [ -z "$devices_mount_info" ]; then
+    # cgroups not set up; must not be in a container
+    return
+  fi
+
+  local devices_subsytems=$(echo $devices_mount_info | cut -d: -f2)
+  local devices_subdir=$(echo $devices_mount_info | cut -d: -f3)
+
+  if [ "$devices_subdir" = "/" ]; then
+    # we're in the root devices cgroup; must not be in a container
+    return
+  fi
+
+  if [ ! -e /tmp/devices-cgroup ]; then
+    # mount our container's devices subsystem somewhere
+    mkdir /tmp/devices-cgroup
+    mount -t cgroup -o $devices_subsytems none /tmp/devices-cgroup
+  fi
+
+  # permit our cgroup to do everything with all devices
+  echo a > /tmp/devices-cgroup${devices_subdir}/devices.allow || true
+
+  umount /tmp/devices-cgroup || true
+}
+
+function create_loop_devices() {
+  amt=$1
+  for i in $(seq 0 $amt); do
+    mknod -m 0660 /dev/loop$i b 7 $i || true
+  done
+}
+
+function load_apparmor_profile() {
+  local profile_path=$1
+  export PATH=$PATH:$(readlink -nf /var/vcap/packages/apparmor/bin)
+
+  if ! mountpoint -q /sys/kernel/security; then
+    mount -t securityfs securityfs /sys/kernel/security
+  fi
+
+  apparmor_parser -r "$profile_path"
+}
+
+function set_graph_permissions() {
+  local graph_path
+  graph_path=$1
+
+  chown "$(maximus):$(maximus)" "$graph_path"
+  chmod 700 "$graph_path"
+}
+
+function wait_pid() {
+  pid=$1
+  shift
+  max_checks=$1
+  shift
+
+  checks=$max_checks
+  while [ -e "/proc/$pid" ]; do
+    checks=$((checks - 1))
+    if [ $checks -le 0 ]; then
+      return 1
+    fi
+    sleep 0.1
+  done
+
+  return 0
+}
+
+function stop_guardian() {
+  local pid
+  pid=$(cat "$PIDFILE")
+
+  echo "stopping guardian"
+  kill -TERM "$pid"
+  if wait_pid "$pid" 100 ; then
+    rm "$PIDFILE"
+    return 0
+  fi
+
+  echo "unable to stop guardian process using SIGTERM after 10 seconds, will now attempt to SIGQUIT"
+  kill -QUIT "$pid" || true
+  if wait_pid "$pid" 50 ; then
+    rm "$PIDFILE"
+    return 0
+  fi
+
+  echo "unable to stop guardian process using SIGQUIT after 5 seconds, will now attempt to SIGKILL"
+  kill -KILL "$pid" || true
+  if wait_pid "$pid" 50 ; then
+    rm "$PIDFILE"
+    return 0
+  fi
+
+  echo "unable to stop guardian process using SIGKILL after 5 seconds"
+  return 1
+}
+
+case $1 in
+
+  start)
+    if [ -f "$PIDFILE" ]; then
+      pid=$(head -1 "$PIDFILE")
+
+      if [ -n "$pid" ] && [ -e /proc/$pid ]; then
+        echo "Garden is already running (pid: $pid); aborting."
+        exit 1
+      fi
+
+      echo "Removing stale pidfile..."
+      rm "$PIDFILE"
+    fi
+
+    mkdir -p $RUN_DIR
+    mkdir -p $GARDEN_DIR
+    mkdir -p $LOG_DIR
+
+    export TMPDIR=/var/vcap/data/tmp
+    mkdir -p $TMPDIR
+
+    export PATH=/var/vcap/packages/iptables/sbin:$PATH
+    export PATH=/var/vcap/packages/garden-idmapper/bin:$PATH
+    export PATH=/var/vcap/jobs/garden/bin:$PATH
+
+    depot_path=${GARDEN_DIR}/depot
+    mkdir -p $depot_path
+
+    <% if p("garden.experimental_rootless_mode") %>
+      runc_root=/run/runc
+      mkdir -p $runc_root
+      chmod 700 $runc_root
+      chown "$(maximus):$(maximus)" $GARDEN_DIR $LOG_DIR $TMPDIR $depot_path $runc_root
+    <% end %>
+
+    graph_path=${GARDEN_DIR}/graph
+    mkdir -p $graph_path
+
+    permit_device_control
+    create_loop_devices 256
+
+    <% if p("garden.apparmor_profile") == "garden-default" %>
+      load_apparmor_profile "$GARDEN_CONFIG_DIR"/garden-default
+    <% end %>
+
+    set_graph_permissions "$graph_path"
+
+    echo 1 > /proc/sys/kernel/dmesg_restrict
+
+    ulimit -n 65536
+    echo 4194304 > /proc/sys/kernel/pid_max
+    ulimit -u unlimited
+
+    exec 1> >( tee -a $LOG_DIR/garden.stdout.log | logger -p user.info -t vcap.garden ) \
+         2> >( tee -a $LOG_DIR/garden.stderr.log | logger -p user.error -t vcap.garden )
+
+    exec_command="exec"
+    setup_cmd="/var/vcap/packages/guardian/bin/gdn setup"
+    <% if p("garden.experimental_rootless_mode") %>
+      max=$(maximus)
+      exec_command="$exec_command chpst -u :$max:$max"
+      setup_cmd="$setup_cmd --rootless-uid $max --rootless-gid $max"
+    <% end %>
+
+    $setup_cmd
+
+    echo $$ > $PIDFILE
+    $exec_command /var/vcap/packages/guardian/bin/gdn \
+    server --skip-setup \
+    <% if p("garden.listen_network") == "tcp" %> \
+    <% ip, port = p("garden.listen_address").split(":") %> \
+      --bind-ip=<%= ip %> \
+      --bind-port=<%= port %> \
+    <% else %> \
+      --bind-socket=<%= p("garden.listen_address") %> \
+    <% end %> \
+      --depot=$depot_path \
+      --graph=$graph_path \
+      --properties-path=/var/vcap/data/garden/props.json \
+      --port-pool-properties-path=/var/vcap/data/garden/port-pool-props.json \
+      --iptables-bin=/var/vcap/packages/iptables/sbin/iptables \
+      --iptables-restore-bin=/var/vcap/packages/iptables/sbin/iptables-restore \
+      --init-bin=/var/vcap/packages/guardian/bin/init \
+      --dadoo-bin=/var/vcap/packages/guardian/bin/dadoo \
+      --nstar-bin=/var/vcap/packages/guardian/bin/nstar \
+      --tar-bin=/var/vcap/packages/tar/tar \
+      --newuidmap-bin=/var/vcap/packages/garden-idmapper/bin/newuidmap \
+      --newgidmap-bin=/var/vcap/packages/garden-idmapper/bin/newgidmap \
+      --log-level=<%= p("garden.log_level") %> \
+      --mtu=<%= p("garden.network_mtu") %> \
+      --network-pool=<%= p("garden.network_pool") %> \
+    <% p("garden.deny_networks").each do |network| %> \
+      --deny-network=<%= network %> \
+    <% end %> \
+    <% p("garden.allow_networks").each do |network| %> \
+      --allow-network=<%= network %> \
+    <% end %> \
+    <% if p("garden.destroy_containers_on_start") %> \
+      --destroy-containers-on-startup \
+    <% end %> \
+    <% if p("garden.allow_host_access") %> \
+      --allow-host-access \
+    <% end %> \
+    <% if_p("garden.debug_listen_address") do |debug_listen_address| %> \
+      <% debug_ip, debug_port = debug_listen_address.split(":") %> \
+      --debug-bind-ip=<%= debug_ip %> \
+      --debug-bind-port=<%= debug_port %> \
+    <% end %> \
+      --default-rootfs=<%= p("garden.default_container_rootfs") %> \
+      --default-grace-time=<%= p("garden.default_container_grace_time") %> \
+      --default-container-blockio-weight=<%= p("garden.default_container_blockio_weight") %> \
+      --graph-cleanup-threshold-in-megabytes=<%= p("garden.graph_cleanup_threshold_in_mb") %> \
+    <% if_p("garden.max_containers") do |max_containers| %> \
+      --max-containers=<%= max_containers %> \
+    <% end %> \
+    <% if_p("garden.cpu_quota_per_share_in_us") do |quota_per_share| %> \
+      --cpu-quota-per-share=<%= quota_per_share %> \
+    <% end %> \
+    <% if_p("garden.experimental_tcp_mem_limit_in_bytes") do |tcp_memory| %> \
+      --tcp-memory-limit=<%= tcp_memory %> \
+    <% end %> \
+      --runtime-plugin=<%= p("garden.runtime_plugin", "/var/vcap/packages/runc/bin/runc") %> \
+    <% if_p("garden.image_plugin") do |plugin| %> \
+      --image-plugin=<%= plugin %> \
+      <% p("garden.image_plugin_extra_args").each do |arg| %> \
+      --image-plugin-extra-arg=<%= arg %> \
+      <% end %> \
+    <% end %> \
+    <% if_p("garden.privileged_image_plugin") do |plugin| %> \
+      --privileged-image-plugin=<%= plugin %> \
+      <% p("garden.privileged_image_plugin_extra_args").each do |arg| %> \
+      --privileged-image-plugin-extra-arg=<%= arg %> \
+      <% end %> \
+    <% end %> \
+    <% if_p("garden.network_plugin") do |plugin| %> \
+      --network-plugin=<%= plugin %> \
+      <% p("garden.network_plugin_extra_args").each do |arg| %> \
+      --network-plugin-extra-arg=<%= arg %> \
+      <% end %> \
+    <% end %> \
+    <% if_p("garden.docker_registry_endpoint") do |endpoint| %> \
+      --docker-registry=<%= endpoint %> \
+    <% end %> \
+    <% if_p("garden.dropsonde.origin") do |origin| %> \
+      --dropsonde-origin=<%= origin %> \
+    <% end %> \
+    <% if_p("garden.dropsonde.destination") do |destination| %> \
+      --dropsonde-destination=<%= destination %> \
+    <% end %> \
+    <% if_p("garden.port_pool.start") do |start| %> \
+      --port-pool-start=<%= start %> \
+    <% end %> \
+    <% if_p("garden.port_pool.size") do |size| %> \
+      --port-pool-size=<%= size %> \
+    <% end %> \
+    <% p("garden.insecure_docker_registry_list").each do |url| %> \
+      --insecure-docker-registry=<%= url %> \
+    <% end %> \
+    <% p("garden.persistent_image_list").each do |url| %> \
+      --persistent-image=<%= url %> \
+    <% end %> \
+    <% p("garden.dns_servers").each do |server| %> \
+      --dns-server=<%= server %> \
+    <% end %> \
+    <% p("garden.additional_dns_servers").each do |server| %> \
+      --additional-dns-server=<%= server %> \
+    <% end %> \
+    <% if !p("garden.apparmor_profile").empty? %> \
+      --apparmor=<%= p("garden.apparmor_profile") %> \
+    <% end %> \
+    <% if p("garden.cleanup_process_dirs_on_wait") %> \
+      --cleanup-process-dirs-on-wait \
+    <% end %> \
+    ;;
+
+  stop)
+    stop_guardian
+
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop}"
+
+    ;;
+
+esac

@@ -1,0 +1,29 @@
+#!/bin/bash
+# vim: set ft=sh
+
+set -e
+
+export PATH=$(pwd)/bin:$PATH
+export GOPATH=$(pwd)
+
+pushd src/github.com/teddyking/cfbench
+go install
+popd
+
+cf api "$CF_API" --skip-ssl-validation
+cf login -u "$CF_USERNAME" -p "$CF_PASSWORD" -s "$CF_SPACE" -o "$CF_ORG" --skip-ssl-validation
+
+export CF_AUTH_TOKEN=$(cf oauth-token)
+DOPPLER_ADDRESS=$(cf curl /v2/info | jq '.doppler_logging_endpoint' -r)
+
+export CF_TAG
+if [ -d "gr-release-develop/.git" ]; then
+  CF_TAG="sha:$(git --git-dir=gr-release-develop/.git rev-parse --short HEAD)"
+fi
+
+cfbench \
+  -app-dir cf-acceptance-tests/assets/dora \
+  -doppler-address "$DOPPLER_ADDRESS" -json > metrics.json
+
+curl -X POST -H 'Content-Type: application/json' -d @metrics.json \
+   "https://app.datadoghq.com/api/v1/series?api_key=$DATADOG_API_KEY&application_key=$DATADOG_APPLICATION_KEY"

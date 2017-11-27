@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e -x
+
+# fail fast if gosub is not installed
+which gosub
+
+function linux_deps {
+  GOOS=linux gosub list \
+    -a code.cloudfoundry.org/guardian/... \
+    -t code.cloudfoundry.org/guardian/... \
+    -t code.cloudfoundry.org/garden/... \
+    -t code.cloudfoundry.org/garden-shed/... \
+    -t code.cloudfoundry.org/garden-integration-tests/...
+}
+
+function windows_deps {
+  GOOS=windows gosub list \
+    -a code.cloudfoundry.org/guardian/... \
+    -t code.cloudfoundry.org/guardian/... \
+    -t code.cloudfoundry.org/garden/... \
+    -t code.cloudfoundry.org/garden-integration-tests/...
+}
+
+(
+  sort -u \
+    <(linux_deps) \
+    <(windows_deps)
+) | xargs gosub sync
