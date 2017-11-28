@@ -1,0 +1,7 @@
+---
+name: logstash
+dependencies:
+  - java8
+files:
+  - logstash/logstash-all-plugins-2.4.1.tar.gz
+

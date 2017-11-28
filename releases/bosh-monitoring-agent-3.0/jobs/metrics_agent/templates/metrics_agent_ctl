@@ -1,0 +1,63 @@
+#!/bin/bash -e
+
+RUN_DIR=/var/vcap/sys/run/metrics_agent
+LOG_DIR=/var/vcap/sys/log/metrics_agent
+
+PIDFILE=$RUN_DIR/metrics_agent.pid
+DATA_DIR=/var/vcap/data/metrics_agent
+TMP_DIR=$DATA_DIR/tmp
+
+source /var/vcap/packages/pid_utils/pid_utils.sh
+
+case $1 in
+
+start)
+pid_guard $PIDFILE "metrics_agent"
+
+mkdir -p $RUN_DIR
+chown -R vcap:vcap $RUN_DIR
+
+mkdir -p $LOG_DIR
+chown -R vcap:vcap $LOG_DIR
+
+mkdir -p $DATA_DIR
+chown -R vcap:vcap $DATA_DIR
+
+mkdir -p $TMP_DIR
+chown -R vcap:vcap $TMP_DIR
+
+export GOMAXPROCS=$(nproc)
+
+#echo $$ > $PIDFILE
+PID=$$
+echo "current pid : $PID"
+echo $PID > $PIDFILE
+
+# change file mode to 0666
+chmod 666 $PIDFILE
+
+# Allowed number of open file descriptors
+ulimit -n 100000
+
+exec chpst -u vcap:vcap /var/vcap/packages/metrics_agent/bin/monitoring_agent \
+  -origin=<%= p("metrics_agent.origin") %> \
+  -influxUrl=<%= p("metrics_agent.influxdb.url") %> \
+  -influxDatabase=<%= p("metrics_agent.influxdb.database") %> \
+  -measurement=<%= p("metrics_agent.influxdb.measurement") %> \
+  -processMeasurement=<%= p("metrics_agent.influxdb.processMeasurement") %> \
+  2> >(tee -a $LOG_DIR/metrics_agent.stderr.log | logger -p user.error -t vcap.metrics_agent) \
+  1> >(tee -a $LOG_DIR/metrics_agent.stdout.log | logger -p user.info -t vcap.metrics_agent)
+
+;;
+
+stop)
+kill_and_wait $PIDFILE
+
+;;
+
+*)
+echo "Usage: metrics_agent_ctl {start|stop}"
+
+;;
+
+esac

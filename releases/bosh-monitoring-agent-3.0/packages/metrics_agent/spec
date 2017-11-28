@@ -1,0 +1,21 @@
+---
+name: metrics_agent
+
+dependencies:
+- golang
+
+files:
+  - com/crossent/monitoring_agent/*
+  - com/crossent/monitoring_agent/services/*.go
+  - com/crossent/monitoring_agent/handler/*.go
+  - code.cloudfoundry.org/lager/**/*.go
+  - code.cloudfoundry.org/cflager/*.go
+  - code.cloudfoundry.org/debugserver/*.go
+  - code.cloudfoundry.org/runtimeschema/cc_messages/*.go # gosub
+  - code.cloudfoundry.org/runtimeschema/cc_messages/flags/*.go # gosub
+  - code.cloudfoundry.org/runtimeschema/metric/*.go # gosub
+  - github.com/influxdata/**/*.go
+  - github.com/tedsuo/ifrit/**/*.go # gosub
+  - github.com/bradfitz/slice/*.go #gosub
+  - github.com/shirou/gopsutil/**/*.go #gosub
+#  - go4.org/**/*.go #gosub

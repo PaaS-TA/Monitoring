@@ -1,0 +1,25 @@
+---
+name: metrics_agent
+templates:
+    metrics_agent_ctl: bin/metrics_agent_ctl
+
+packages:
+  - pid_utils
+  - metrics_agent
+
+properties:
+  metrics_agent.influxdb.url:
+    description: "influxdb url address. ex) influxdb_ip:port"
+    default: "127.0.0.1:8059"
+  metrics_agent.influxdb.database:
+    description: "influxdb database name for metrics"
+    default: "bosh_metric_db"
+  metrics_agent.influxdb.measurement:
+    description: "influxdb target measurement for metrics"
+    default: "bosh_metrics"
+  metrics_agent.influxdb.processMeasurement:
+    description: "influxdb target process measurement for metrics"
+    default: "bosh_process_metrics"
+  metrics_agent.origin:
+    description: "bosh service name. ex) vm's instance name"
+    default: "director"

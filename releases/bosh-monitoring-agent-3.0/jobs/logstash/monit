@@ -1,0 +1,5 @@
+check process logstash
+  with pidfile /var/vcap/sys/run/logstash/logstash.pid
+  start program "/var/vcap/jobs/logstash/bin/monit_debugger logstash_ctl '/var/vcap/jobs/logstash/bin/logstash_ctl start'"
+  stop program "/var/vcap/jobs/logstash/bin/monit_debugger logstash_ctl '/var/vcap/jobs/logstash/bin/logstash_ctl stop'"
+  group vcap

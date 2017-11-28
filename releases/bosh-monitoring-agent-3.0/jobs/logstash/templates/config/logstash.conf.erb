@@ -1,0 +1,22 @@
+input {
+	file {
+		path => "<%= p("logstash.input.file_path") %>"
+		codec => multiline {
+				pattern => "I,|D,|E,"
+				negate => true
+				max_lines => 100000
+				what => previous
+		}
+	}
+}
+
+filter {
+}
+
+output {
+	stdout { codec => rubydebug }
+	udp {
+		host => "<%= p("logstash.ingestor_bosh.host") %>"
+		port => <%= p("logstash.ingestor_bosh.port") %>
+	}
+}

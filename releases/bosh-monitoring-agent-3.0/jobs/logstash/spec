@@ -1,0 +1,22 @@
+---
+name: logstash
+packages:
+  - logstash
+  - java8
+templates:
+  bin/logstash_ctl: bin/logstash_ctl
+  bin/monit_debugger: bin/monit_debugger
+  data/properties.sh.erb: data/properties.sh
+  helpers/ctl_setup.sh: helpers/ctl_setup.sh
+  helpers/ctl_utils.sh: helpers/ctl_utils.sh
+  config/logstash.conf.erb: config/logstash.conf
+properties:
+  logstash.ingestor_bosh.host:
+    description: logsearch's ingestor_bosh host
+    default: ""
+  logstash.ingestor_bosh.port:
+    description: logsearch's ingestor_bosh listen port
+    default: 3001
+  logstash.input.file_path:
+    description: bosh file path for collecting log
+    default: "/var/vcap/store/director/tasks/**/debug"
